@@ -1,0 +1,29 @@
+{
+  "name": "rally-ai-testcase-generator",
+  "version": "1.0.0",
+  "description": "Generate AI test cases and Postman requests from Rally acceptance criteria",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "Rally",
+    "AI",
+    "Test Cases",
+    "Postman"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.3.4",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "openai": "^6.27.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
