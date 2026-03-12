@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Rally AI Test Case Generator
 
 > **Transform Rally Acceptance Criteria into AI-Generated Test Cases and Postman Requests**
@@ -263,3 +264,7 @@ For issues:
 ---
 
 **Built with ❤️ for QA Automation Engineers**
+=======
+# Rally-Test-Case-Generator
+Test case genertor for rally
+>>>>>>> 9d0fe769796660f02db431fc4b9342c6bfda71c4
