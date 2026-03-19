@@ -216,6 +216,28 @@ Return ONLY valid JSON array - no markdown, no explanations, just the JSON array
     return response.data.candidates[0].content.parts[0].text;
   }
 
+  async generateWithClaude(prompt) {
+  const response = await axios.post(
+    "https://api.anthropic.com/v1/messages",
+    {
+      model: "claude-3-5-sonnet-20240620",
+      max_tokens: 1024,
+      messages: [
+        { role: "user", content: prompt }
+      ]
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.claudeApiKey,
+        "anthropic-version": "2023-06-01"
+      }
+    }
+  );
+
+  return response.data.content[0].text;
+}
+
   parseTestCases(testCaseText) {
     // Parse the AI-generated test cases into structured data
     const testCases = [];
