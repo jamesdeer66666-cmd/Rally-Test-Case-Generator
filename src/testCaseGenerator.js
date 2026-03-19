@@ -28,57 +28,50 @@ Story: ${storyName}
 Acceptance Criteria:
 ${acceptanceCriteria}
 
-Generate test cases specifically for API testing with the following structure for each test case:
+Generate test cases specifically for API testing and return them as a valid JSON array. Each test case should be an object with the following structure:
 
-**POSITIVE TEST CASES** (Happy Path Scenarios):
-- Test Case ID (e.g., TC_POS_API_001)
-- Title (API-focused)
-- Test Type: Positive
-- HTTP Method (GET/POST/PUT/DELETE/PATCH)
-- Endpoint URL
-- Request Headers (if applicable)
-- Request Body (JSON format if applicable)
-- Expected Status Code
-- Expected Response Body (key fields to validate)
-- Test Steps (numbered, Postman-specific)
-- Expected Result
-- Priority (High/Medium/Low)
+{
+  "testCases": [
+    {
+      "id": "TC_POS_API_001",
+      "title": "API-focused test case title",
+      "type": "positive|negative|edge",
+      "method": "GET|POST|PUT|DELETE|PATCH",
+      "endpoint": "/api/endpoint",
+      "headers": {"Content-Type": "application/json", "Authorization": "Bearer token"},
+      "requestBody": {"key": "value"},
+      "expectedStatusCode": 200,
+      "expectedResponse": {"key": "expected value"},
+      "testSteps": ["Step 1: description", "Step 2: description"],
+      "expectedResult": "Expected outcome description",
+      "priority": "High|Medium|Low"
+    }
+  ]
+}
 
-**NEGATIVE TEST CASES** (Error Handling):
-- Test Case ID (e.g., TC_NEG_API_001)
-- Title (API-focused)
-- Test Type: Negative
-- HTTP Method
-- Endpoint URL
-- Invalid Input (wrong headers, malformed body, etc.)
-- Expected Status Code (4xx/5xx)
-- Expected Error Response
-- Test Steps
-- Expected Result
-- Priority
-
-**EDGE TEST CASES** (Boundary Conditions):
-- Test Case ID (e.g., TC_EDGE_API_001)
-- Title (API-focused)
-- Test Type: Edge
-- HTTP Method
-- Endpoint URL
-- Edge Case Input (large data, special characters, rate limits, etc.)
-- Expected Behavior
-- Test Steps
-- Expected Result
-- Priority
-
-Focus on API-specific testing: status codes, response validation, error handling, data validation, authentication, rate limiting, etc.
-Structure test cases so they can be directly executed in Postman with clear pass/fail criteria.
+Include positive, negative, and edge test cases. Focus on API-specific testing: status codes, response validation, error handling, data validation, authentication, rate limiting, etc.
+Return ONLY valid JSON - no markdown, no explanations, just the JSON array.
 `;
 
+      let rawResponse;
       if (this.provider === 'groq') {
-        return await this.generateWithGROQ(prompt, 'API test cases');
+        rawResponse = await this.generateWithGROQ(prompt, 'API test cases');
       } else if (this.provider === 'gemini') {
-        return await this.generateWithGemini(prompt);
+        rawResponse = await this.generateWithGemini(prompt);
       } else {
-        return await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
+        rawResponse = await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
+      }
+
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = rawResponse.replace(/```json\s*|\s*```/g, '').trim();
+      
+      try {
+        const parsed = JSON.parse(cleanedResponse);
+        return JSON.stringify(parsed, null, 2); // Return formatted JSON
+      } catch (parseError) {
+        // Fallback to original text parsing if JSON fails
+        console.warn('Failed to parse AI response as JSON, falling back to text parsing:', parseError.message);
+        return rawResponse;
       }
     } catch (error) {
       throw new Error(`Failed to generate test cases: ${error.message}`);
@@ -98,27 +91,49 @@ ${endpointInfo}
 Acceptance Criteria:
 ${acceptanceCriteria}
 
-Generate Postman JSON requests including:
-1. Request name (matching the test case)
-2. Request method (GET, POST, PUT, DELETE, PATCH)
-3. URL ${endpoint ? `using the provided endpoint` : `(use placeholder like {{baseUrl}}/api/endpoint)`}
-4. Headers (Authorization, Content-Type, etc.)
-5. Request body (JSON format if applicable)
-6. Expected response status code
-7. Test assertions in JavaScript
+Generate Postman JSON requests and return them as a valid JSON array. Each request should be an object with the following structure:
+
+[
+  {
+    "name": "Request name matching the test case",
+    "method": "GET|POST|PUT|DELETE|PATCH",
+    "url": "${endpoint ? endpoint : '{{baseUrl}}/api/endpoint'}",
+    "headers": [
+      {"key": "Content-Type", "value": "application/json"},
+      {"key": "Authorization", "value": "Bearer {{token}}"}
+    ],
+    "body": {
+      "mode": "raw",
+      "raw": "{\\"key\\": \\"value\\"}"
+    },
+    "tests": "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+  }
+]
 
 ${endpoint ? '' : 'Since no specific endpoint was provided, use generic placeholders like {{baseUrl}}/api/endpoint in the URLs.'}
 
-Format as valid JSON that can be imported into Postman.
-Return a JSON array of request objects.
+Return ONLY valid JSON array - no markdown, no explanations, just the JSON array.
 `;
 
+      let rawResponse;
       if (this.provider === 'groq') {
-        return await this.generateWithGROQ(prompt, 'Postman requests');
+        rawResponse = await this.generateWithGROQ(prompt, 'Postman requests');
       } else if (this.provider === 'gemini') {
-        return await this.generateWithGemini(prompt);
+        rawResponse = await this.generateWithGemini(prompt);
       } else {
-        return await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
+        rawResponse = await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
+      }
+
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = rawResponse.replace(/```json\s*|\s*```/g, '').trim();
+      
+      try {
+        const parsed = JSON.parse(cleanedResponse);
+        return JSON.stringify(parsed, null, 2); // Return formatted JSON
+      } catch (parseError) {
+        // Fallback to original text parsing if JSON fails
+        console.warn('Failed to parse AI response as JSON, falling back to text parsing:', parseError.message);
+        return rawResponse;
       }
     } catch (error) {
       throw new Error(`Failed to generate Postman requests: ${error.message}`);

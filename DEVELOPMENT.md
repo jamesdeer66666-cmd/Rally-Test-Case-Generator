@@ -288,51 +288,43 @@ External Dependencies
 
 ### AI Prompt Engineering
 
-The application uses carefully crafted prompts to generate high-quality test cases:
+The application uses carefully crafted prompts to generate high-quality test cases in structured JSON format for better readability and parsing:
 
 ```javascript
-// Complete test case generation prompt
+// Updated test case generation prompt (JSON output)
 const generateTestCasePrompt = (acceptanceCriteria, storyName) => `
-Based on the following acceptance criteria, generate comprehensive API test cases that QA analysts can execute using Postman or API reference tools.
+Based on the following acceptance criteria, generate comprehensive API test cases...
 
-NOTE: Ignore any UI or portal references in the acceptance criteria. Whenever you encounter words like "navigate", "click", "select", "screen", "page", "UI", "form", or "portal" convert that sentence into an API action. Always rewrite such language into equivalent API calls phrased as "Send [METHOD] request to [endpoint]...". For example, if the AC says "Navigate to New Policy and select Hanover", rewrite that as "Build POST request to /api/policies with carrier=\"Hanover\"". All interactions are via HTTP REST API calls only; do not retain any UI language.
+Return them as a valid JSON array with the following structure:
+{
+  "testCases": [
+    {
+      "id": "TC_POS_API_001",
+      "title": "API-focused test case title",
+      "type": "positive|negative|edge",
+      "method": "GET|POST|PUT|DELETE|PATCH",
+      "endpoint": "/api/endpoint",
+      "headers": {"Content-Type": "application/json"},
+      "requestBody": {"key": "value"},
+      "expectedStatusCode": 200,
+      "expectedResponse": {"key": "expected value"},
+      "testSteps": ["Step 1: description"],
+      "expectedResult": "Expected outcome",
+      "priority": "High|Medium|Low"
+    }
+  ]
+}
 
-Story: ${storyName}
+Return ONLY valid JSON - no markdown, no explanations, just the JSON array.
+`;
+```
 
-Acceptance Criteria:
-${acceptanceCriteria}
-
-Generate test cases specifically for API testing with the following structure for each test case:
-
-**POSITIVE TEST CASES** (Happy Path Scenarios):
-- Test Case ID (e.g., TC_POS_API_001)
-- Title (API-focused)
-- Test Type: Positive
-- HTTP Method (GET/POST/PUT/DELETE/PATCH)
-- Endpoint URL
-- Request Headers (if applicable)
-- Request Body (JSON format if applicable)
-- Expected Status Code
-- Expected Response Body (key fields to validate)
-- Test Steps (numbered, Postman-specific)
-- Expected Result
-- Priority (High/Medium/Low)
-
-**NEGATIVE TEST CASES** (Error Handling):
-- Test Case ID (e.g., TC_NEG_API_001)
-- Title (API-focused)
-- Test Type: Negative
-- HTTP Method (GET/POST/PUT/DELETE/PATCH)
-- Endpoint URL
-- Request Headers (if applicable)
-- Request Body (JSON format - invalid data)
-- Expected Status Code (4xx/5xx)
-- Expected Response Body (error details)
-- Test Steps (numbered, Postman-specific)
-- Expected Result (error message/validation)
-- Priority (High/Medium/Low)
-
-Format each test case clearly with proper separation and numbering.`;
+#### Key Improvements for Readability
+- **Structured JSON Output**: AI now generates test cases in valid JSON format instead of plain text
+- **Consistent Schema**: Each test case follows a predictable structure with all required fields
+- **Machine-Readable**: JSON format enables easy parsing, validation, and programmatic processing
+- **Fallback Support**: System gracefully handles both JSON and legacy text formats
+- **Better Error Handling**: Invalid JSON responses are logged and fallback parsing is attempted
 ```
 
 ### Rally API Integration

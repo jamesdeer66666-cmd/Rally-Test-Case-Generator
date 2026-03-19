@@ -101,25 +101,20 @@ app.post('/api/generate/testcases', async (req, res) => {
       return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
     }
 
-    let testCases = await testCaseGenerator.generateTestCases(acceptanceCriteria, storyName);
-    // sanitize UI references (convert or remove them) before returning
-    const sanitizeUI = text => {
-      let out = text;
-      // replace common UI phrases with generic API actions
-      out = out.replace(/Log in.*(?:\n|$)/gi, 'Authenticate using API token\n');
-      out = out.replace(/Navigate to.*(?:\n|$)/gi, 'Send appropriate API request\n');
-      out = out.replace(/Click .*?(?:\.|\n)/gi, 'Send API request accordingly.\n');
-      out = out.replace(/select \*\*([^*]+)\*\*/gi, 'set "$1" field via API');
-      out = out.replace(/screen/gi, 'API endpoint');
-      out = out.replace(/form/gi, 'JSON payload');
-      out = out.replace(/UI/gi, 'API');
-      return out;
-    };
-    const sanitized = sanitizeUI(testCases);
-    const parsedTestCases = testCaseGenerator.parseTestCases(sanitized);
+    const rawOutput = await testCaseGenerator.generateTestCases(acceptanceCriteria, storyName);
+    
+    let parsedTestCases;
+    try {
+      // Try to parse as JSON first (new format)
+      const jsonData = JSON.parse(rawOutput);
+      parsedTestCases = jsonData.testCases || [];
+    } catch (jsonError) {
+      // Fallback to text parsing for backward compatibility
+      parsedTestCases = testCaseGenerator.parseTestCases(rawOutput);
+    }
 
     res.json({ 
-      rawOutput: sanitized,
+      rawOutput: rawOutput,
       parsedTestCases: parsedTestCases
     });
   } catch (error) {
@@ -140,17 +135,25 @@ app.post('/api/generate/postman', async (req, res) => {
       return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
     }
 
-    const postmanRequests = await testCaseGenerator.generatePostmanRequests(
+    const rawOutput = await testCaseGenerator.generatePostmanRequests(
       acceptanceCriteria,
       storyName,
       endpoint
     );
 
-    const parsedRequests = PostmanGenerator.parseRequestsFromText(postmanRequests);
+    let parsedRequests;
+    try {
+      // Try to parse as JSON first (new format)
+      parsedRequests = JSON.parse(rawOutput);
+    } catch (jsonError) {
+      // Fallback to text parsing for backward compatibility
+      parsedRequests = PostmanGenerator.parseRequestsFromText(rawOutput);
+    }
+
     const collection = PostmanGenerator.generateCollection(parsedRequests, `${storyName} - API Tests`);
 
     res.json({ 
-      rawOutput: postmanRequests,
+      rawOutput: rawOutput,
       parsedRequests: parsedRequests,
       collection: collection
     });
