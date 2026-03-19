@@ -29,13 +29,26 @@ app.get('/api/health', (req, res) => {
 
 // Configuration check and setup
 app.post('/api/config/validate', (req, res) => {
-  const { rallyApiKey, rallyWorkspaceUrl, openaiApiKey, aiProvider: provider } = req.body;
+  const { rallyApiKey, rallyWorkspaceUrl, openaiApiKey, groqApiKey, geminiApiKey, claudeApiKey, aiProvider: provider } = req.body;
 
-  if (!openaiApiKey) {
+  // Determine which API key to use based on provider
+  let apiKey;
+  if (provider === 'groq') {
+    apiKey = groqApiKey;
+  } else if (provider === 'gemini') {
+    apiKey = geminiApiKey;
+  } else if (provider === 'claude') {
+    apiKey = claudeApiKey;
+  } else {
+    apiKey = openaiApiKey; // Default to OpenAI
+  }
+
+  if (!apiKey) {
     return res.status(400).json({ 
       error: 'Missing required configuration',
       missingFields: {
-        openaiApiKey: !openaiApiKey
+        apiKey: !apiKey,
+        provider: provider
       }
     });
   }
@@ -47,7 +60,7 @@ app.post('/api/config/validate', (req, res) => {
     }
     
     aiProvider = provider || 'openai';
-    testCaseGenerator = new TestCaseGenerator(openaiApiKey, aiProvider);
+    testCaseGenerator = new TestCaseGenerator(apiKey, aiProvider);
 
     res.json({ 
       status: 'configured',

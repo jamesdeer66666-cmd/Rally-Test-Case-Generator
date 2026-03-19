@@ -264,7 +264,7 @@ External Dependencies
 
 #### External Integrations
 - **Rally API**: REST-based integration for requirements management
-- **OpenAI/GROQ/Gemini**: AI providers for natural language processing
+- **OpenAI/GROQ/Gemini/Claude**: AI providers for natural language processing
 - **Postman Collections**: Standard format for API testing tools
 
 ### Design Patterns
@@ -1009,10 +1009,10 @@ A: The project uses modern JavaScript features and ES6 modules. Node.js 14+ prov
 A: Yes! You can use the "Manual Input" tab to enter acceptance criteria directly without connecting to Rally.
 
 **Q: Which AI provider should I choose?**  
-A: Start with GROQ (free, fast) for development. Use OpenAI for production if you need higher quality output.
+A: Start with GROQ (free, fast) for development. Use OpenAI or Claude for production if you need higher quality output.
 
 **Q: How do I get API keys for the AI providers?**  
-A: Follow the links in the configuration section: GROQ (console.groq.com), OpenAI (platform.openai.com), Gemini (ai.google.dev).
+A: Follow the links in the configuration section: GROQ (console.groq.com), OpenAI (platform.openai.com), Gemini (ai.google.dev), Claude (console.anthropic.com).
 
 ### Technical Questions
 

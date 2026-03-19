@@ -86,7 +86,7 @@ RALLY_API_KEY=your_rally_api_key
 RALLY_WORKSPACE_URL=https://rally1.rallydev.com
 
 # AI Provider Configuration  
-# Choose: openai, groq, or gemini
+# Choose: openai, groq, gemini, or claude
 AI_PROVIDER=groq
 AI_API_KEY=your_ai_api_key
 
@@ -117,6 +117,13 @@ NODE_ENV=development
 - **Models**: Gemini 1.5
 - **Speed**: Good
 - **Best for**: Multi-modal tasks
+
+#### 🧠 Claude (Anthropic)
+- **Cost**: Pay-as-you-go ($0.01-0.05 per test)
+- **Setup**: https://console.anthropic.com/
+- **Models**: Claude 3.5 Sonnet (most powerful)
+- **Speed**: Good
+- **Best for**: High quality, safety-focused
 
 ## 📚 API Endpoints
 

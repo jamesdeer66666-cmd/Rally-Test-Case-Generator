@@ -422,13 +422,15 @@
           const providerLabels = {
             'groq': 'GROQ API Key (Free)',
             'openai': 'OpenAI API Key',
-            'gemini': 'Google Gemini API Key'
+            'gemini': 'Google Gemini API Key',
+            'claude': 'Claude API Key'
           };
 
           const providerPlaceholders = {
             'groq': 'Get free key from https://console.groq.com/keys',
             'openai': 'Get key from https://platform.openai.com/api/keys',
-            'gemini': 'Get key from https://ai.google.dev'
+            'gemini': 'Get key from https://ai.google.dev',
+            'claude': 'Get key from https://console.anthropic.com'
           };
 
           if (providerSelect) {
@@ -475,15 +477,28 @@
             }
 
             try {
+                // Prepare the request body with the correct API key field name
+                const requestBody = {
+                    aiProvider: aiProvider,
+                    rallyApiKey: rallyApiKey,
+                    rallyWorkspaceUrl: rallyWorkspaceUrl
+                };
+
+                // Add the API key with the correct field name based on provider
+                if (aiProvider === 'groq') {
+                    requestBody.groqApiKey = aiApiKey;
+                } else if (aiProvider === 'gemini') {
+                    requestBody.geminiApiKey = aiApiKey;
+                } else if (aiProvider === 'claude') {
+                    requestBody.claudeApiKey = aiApiKey;
+                } else {
+                    requestBody.openaiApiKey = aiApiKey; // Default to OpenAI
+                }
+
                 const response = await fetch('/api/config/validate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        aiProvider: aiProvider,
-                        openaiApiKey: aiApiKey,
-                        rallyApiKey: rallyApiKey,
-                        rallyWorkspaceUrl: rallyWorkspaceUrl
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();

@@ -57,11 +57,13 @@ Return ONLY valid JSON - no markdown, no explanations, just the JSON array.
 
       let rawResponse;
       if (this.provider === 'groq') {
-        rawResponse = await this.generateWithGROQ(prompt, 'API test cases');
+      rawResponse = await this.generateWithGROQ(prompt, 'API test cases');
       } else if (this.provider === 'gemini') {
-        rawResponse = await this.generateWithGemini(prompt);
+      rawResponse = await this.generateWithGemini(prompt);
+      } else if (this.provider === 'claude') {
+      rawResponse = await this.generateWithClaude(prompt);
       } else {
-        rawResponse = await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
+      rawResponse = await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
       }
 
       // Clean the response to ensure it's valid JSON
@@ -122,6 +124,8 @@ Return ONLY valid JSON array - no markdown, no explanations, just the JSON array
         rawResponse = await this.generateWithGROQ(prompt, 'Postman requests');
       } else if (this.provider === 'gemini') {
         rawResponse = await this.generateWithGemini(prompt);
+      } else if (this.provider === 'claude') {
+        rawResponse = await this.generateWithClaude(prompt);
       } else {
         rawResponse = await this.generateWithOpenAI(prompt, 'gpt-4', 2500);
       }
