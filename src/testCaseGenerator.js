@@ -87,11 +87,13 @@ Structure test cases so they can be directly executed in Postman with clear pass
 
   async generatePostmanRequests(acceptanceCriteria, storyName, endpoint) {
     try {
+      const endpointInfo = endpoint ? `API Endpoint: ${endpoint}` : 'API Endpoint: (not specified - use generic placeholders)';
+
       const prompt = `
 Based on the acceptance criteria provided, generate relevant Postman API test requests.
 
 Story: ${storyName}
-API Endpoint: ${endpoint}
+${endpointInfo}
 
 Acceptance Criteria:
 ${acceptanceCriteria}
@@ -99,11 +101,13 @@ ${acceptanceCriteria}
 Generate Postman JSON requests including:
 1. Request name (matching the test case)
 2. Request method (GET, POST, PUT, DELETE, PATCH)
-3. URL with the provided endpoint
+3. URL ${endpoint ? `using the provided endpoint` : `(use placeholder like {{baseUrl}}/api/endpoint)`}
 4. Headers (Authorization, Content-Type, etc.)
 5. Request body (JSON format if applicable)
 6. Expected response status code
 7. Test assertions in JavaScript
+
+${endpoint ? '' : 'Since no specific endpoint was provided, use generic placeholders like {{baseUrl}}/api/endpoint in the URLs.'}
 
 Format as valid JSON that can be imported into Postman.
 Return a JSON array of request objects.

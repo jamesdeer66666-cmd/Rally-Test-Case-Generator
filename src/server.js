@@ -136,8 +136,8 @@ app.post('/api/generate/postman', async (req, res) => {
 
     const { acceptanceCriteria, storyName, endpoint } = req.body;
 
-    if (!acceptanceCriteria || !storyName || !endpoint) {
-      return res.status(400).json({ error: 'Missing acceptanceCriteria, storyName, or endpoint' });
+    if (!acceptanceCriteria || !storyName) {
+      return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
     }
 
     const postmanRequests = await testCaseGenerator.generatePostmanRequests(

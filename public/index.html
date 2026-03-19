@@ -351,8 +351,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="apiEndpoint">API Endpoint (for Postman generation)</label>
-                    <input type="text" id="apiEndpoint" placeholder="e.g., https://api.example.com/auth/login">
+                    <label for="apiEndpoint">API Endpoint (Optional - for Postman generation)</label>
+                    <input type="text" id="apiEndpoint" placeholder="e.g., https://api.example.com/auth/login (leave blank for generic requests)">
                 </div>
 
                 <div class="button-group">
@@ -371,8 +371,8 @@
                 <div id="selectedStoryDetails"></div>
 
                 <div class="form-group">
-                    <label for="rallyApiEndpoint">API Endpoint</label>
-                    <input type="text" id="rallyApiEndpoint" placeholder="https://api.example.com/endpoint">
+                    <label for="rallyApiEndpoint">API Endpoint (Optional)</label>
+                    <input type="text" id="rallyApiEndpoint" placeholder="https://api.example.com/endpoint (leave blank for generic requests)">
                 </div>
 
                 <div class="button-group">
@@ -383,8 +383,8 @@
             <!-- Output Section -->
             <div class="output-section" id="outputSection" style="display: none;">
                 <div class="tabs">
-                    <button class="tab-button active" onclick="switchOutputTab('raw')">Raw Output</button>
-                    <button class="tab-button" onclick="switchOutputTab('parsed')">Parsed Output</button>
+                    <button class="tab-button active" onclick="switchOutputTab('raw')">AI Generated Text</button>
+                    <button class="tab-button" onclick="switchOutputTab('parsed')" id="parsedTabButton">Structured Data</button>
                 </div>
 
                 <div id="raw" class="tab-content active">
@@ -393,8 +393,11 @@
                 </div>
 
                 <div id="parsed" class="tab-content">
-                    <h3>Structured Data:</h3>
+                    <h3 id="parsedOutputTitle">Structured Data:</h3>
                     <div id="parsedOutput" class="output"></div>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <button onclick="copyToClipboard()" style="background: #17a2b8; margin-right: 10px;">📋 Copy JSON</button>
+                    </div>
                 </div>
 
                 <button class="download-btn" onclick="downloadResults()">📥 Download Results as JSON</button>
@@ -407,6 +410,7 @@
         let currentConfig = {};
         let currentResults = {};
         let selectedStory = null;
+        let currentResultType = 'testcases'; // 'testcases' or 'postman'
 
         // Update AI key label when provider changes
         document.addEventListener('DOMContentLoaded', function() {
@@ -569,6 +573,7 @@
 
                 if (response.ok) {
                     currentResults = data;
+                    currentResultType = 'testcases';
                     displayResults(data);
                     showStatus('generationStatus', '✅ Test cases generated successfully!', 'success');
                 } else {
@@ -584,8 +589,8 @@
             const acceptanceCriteria = document.getElementById('acceptanceCriteria').value;
             const endpoint = document.getElementById('apiEndpoint').value;
 
-            if (!storyName || !acceptanceCriteria || !endpoint) {
-                showStatus('generationStatus', '❌ Please fill in all fields including API endpoint', 'error');
+            if (!storyName || !acceptanceCriteria) {
+                showStatus('generationStatus', '❌ Please fill in story name and acceptance criteria', 'error');
                 return;
             }
 
@@ -607,6 +612,7 @@
 
                 if (response.ok) {
                     currentResults = data;
+                    currentResultType = 'postman';
                     displayResults(data);
                     showStatus('generationStatus', '✅ Postman requests generated successfully!', 'success');
                 } else {
@@ -623,11 +629,8 @@
                 return;
             }
 
+            // Endpoint is now optional
             const endpoint = document.getElementById('rallyApiEndpoint').value;
-            if (!endpoint) {
-                showStatus('generationStatus', '❌ Please provide API endpoint', 'error');
-                return;
-            }
 
             showStatus('generationStatus', '⏳ Generating from Rally story... <span class="loading"></span>', 'info');
 
@@ -641,8 +644,25 @@
 
         function displayResults(data) {
             document.getElementById('outputSection').style.display = 'block';
+            
+            // Show raw AI output
             document.getElementById('rawOutput').textContent = data.rawOutput || JSON.stringify(data, null, 2);
-            document.getElementById('parsedOutput').textContent = JSON.stringify(data.parsedTestCases || data.parsedRequests || data, null, 2);
+            
+            // Update tab labels and content based on result type
+            const parsedTabButton = document.getElementById('parsedTabButton');
+            const parsedOutputTitle = document.getElementById('parsedOutputTitle');
+            
+            if (currentResultType === 'postman' && data.collection) {
+                // For Postman, show the collection JSON that can be imported
+                parsedTabButton.textContent = 'Postman Collection JSON';
+                parsedOutputTitle.textContent = 'Postman Collection JSON (Copy & Import):';
+                document.getElementById('parsedOutput').textContent = JSON.stringify(data.collection, null, 2);
+            } else {
+                // For test cases, show the parsed test cases
+                parsedTabButton.textContent = 'Structured Data';
+                parsedOutputTitle.textContent = 'Structured Data:';
+                document.getElementById('parsedOutput').textContent = JSON.stringify(data.parsedTestCases || data.parsedRequests || data, null, 2);
+            }
         }
 
         function downloadResults() {
@@ -661,20 +681,21 @@
             URL.revokeObjectURL(url);
         }
 
-        function downloadTextResults() {
-            if (!currentResults || !currentResults.rawOutput) {
-                alert('No results to download');
-                return;
-            }
-
-            const text = currentResults.rawOutput;
-            const textBlob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(textBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `test-cases-${new Date().getTime()}.txt`;
-            link.click();
-            URL.revokeObjectURL(url);
+        function copyToClipboard() {
+            const outputElement = document.getElementById('parsedOutput');
+            const text = outputElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(function() {
+                // Show temporary success message
+                const originalText = outputElement.textContent;
+                outputElement.textContent = '✅ Copied to clipboard!';
+                setTimeout(() => {
+                    outputElement.textContent = originalText;
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard. Please select and copy manually.');
+            });
         }
     </script>
 </body>
