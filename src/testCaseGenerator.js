@@ -13,6 +13,8 @@ class TestCaseGenerator {
       this.groqBaseUrl = 'https://api.groq.com/openai/v1';
     } else if (this.provider === 'gemini') {
       this.geminiApiKey = apiKey;
+    } else if (this.provider === 'claude') {
+      this.claudeApiKey = apiKey;
     }
   }
 
