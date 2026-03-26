@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static('public'));
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Initialize clients
 let rallyClient;
@@ -114,22 +115,16 @@ app.post('/api/generate/testcases', async (req, res) => {
       return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
     }
 
-    const rawOutput = await testCaseGenerator.generateTestCases(acceptanceCriteria, storyName);
-    
-    let parsedTestCases;
-    try {
-      // Try to parse as JSON first (new format)
-      const jsonData = JSON.parse(rawOutput);
-      parsedTestCases = jsonData.testCases || [];
-    } catch (jsonError) {
-      // Fallback to text parsing for backward compatibility
-      parsedTestCases = testCaseGenerator.parseTestCases(rawOutput);
-    }
+    const aiResult = await testCaseGenerator.generateTestCases(
+acceptanceCriteria,
+storyName
+);
 
-    res.json({ 
-      rawOutput: rawOutput,
-      parsedTestCases: parsedTestCases
-    });
+res.json({
+rawOutput: JSON.stringify(aiResult, null, 2),
+parsedTestCases: aiResult.testCases || []
+});
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -137,43 +132,48 @@ app.post('/api/generate/testcases', async (req, res) => {
 
 // Generate Postman requests
 app.post('/api/generate/postman', async (req, res) => {
-  try {
-    if (!testCaseGenerator) {
-      return res.status(400).json({ error: 'OpenAI client not configured' });
-    }
+console.log("🔥 HIT /api/generate/postman route");
 
-    const { acceptanceCriteria, storyName, endpoint } = req.body;
+try {
+if (!testCaseGenerator) {
+return res.status(400).json({ error: 'AI client not configured' });
+}
 
-    if (!acceptanceCriteria || !storyName) {
-      return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
-    }
+const { acceptanceCriteria, storyName, endpoint } = req.body;
 
-    const rawOutput = await testCaseGenerator.generatePostmanRequests(
-      acceptanceCriteria,
-      storyName,
-      endpoint
-    );
+console.log("📥 Request:", { acceptanceCriteria, storyName, endpoint });
 
-    let parsedRequests;
-    try {
-      // Try to parse as JSON first (new format)
-      parsedRequests = JSON.parse(rawOutput);
-    } catch (jsonError) {
-      // Fallback to text parsing for backward compatibility
-      parsedRequests = PostmanGenerator.parseRequestsFromText(rawOutput);
-    }
+if (!acceptanceCriteria || !storyName) {
+return res.status(400).json({ error: 'Missing acceptanceCriteria or storyName' });
+}
 
-    const collection = PostmanGenerator.generateCollection(parsedRequests, `${storyName} - API Tests`);
+const aiResult = await testCaseGenerator.generatePostmanIntent(
+acceptanceCriteria,
+storyName,
+endpoint
+);
 
-    res.json({ 
-      rawOutput: rawOutput,
-      parsedRequests: parsedRequests,
-      collection: collection
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+console.log("✅ FINAL aiResult:", aiResult);
+
+const tests = aiResult?.tests || [];
+
+const collection = PostmanGenerator.generateCollection(
+tests,
+`${storyName} API Tests`
+);
+
+res.json({
+rawOutput: JSON.stringify(aiResult || {}, null, 2),
+parsedRequests: tests,
+collection
 });
+
+} catch (error) {
+console.error("❌ ROUTE ERROR:", error);
+res.status(500).json({ error: error.message });
+}
+});
+
 
 // Export Postman collection
 app.post('/api/export/postman', (req, res) => {

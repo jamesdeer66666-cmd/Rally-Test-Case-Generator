@@ -600,32 +600,113 @@
             }
         }
 
-        async function generatePostmanRequests() {
+       // server.js or routes file
+
+const express = require('express');
+const router = express.Router();
+
+router.post('/api/generate/postman', async (req, res) => {
+try {
+const { storyName, acceptanceCriteria, endpoint } = req.body;
+
+if (!storyName || !acceptanceCriteria) {
+return res.status(400).json({ error: "Missing required fields" });
+}
+
+// ✅ SAFE ENDPOINT (no validation, no fetch)
+const safeEndpoint =
+endpoint && endpoint.trim() !== ""
+? endpoint
+: "https://example.com/api/test";
+
+// ✅ Parse acceptance criteria into steps
+const steps = parseAcceptanceCriteria(acceptanceCriteria);
+
+// ✅ Generate Postman test scripts
+const testScripts = generateTestScripts(steps);
+
+// ✅ Build Postman collection
+const collection = {
+info: {
+name: `${storyName} Collection`,
+description: "Generated from user story",
+schema:
+"https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+},
+item: [
+{
+name: storyName,
+request: {
+method: "POST",
+header: [
+{
+key: "Content-Type",
+value: "application/json",
+},
+],
+url: {
+raw: safeEndpoint,
+host: [safeEndpoint],
+},
+body: {
+mode: "raw",
+raw: JSON.stringify(
+{
+sample: "data",
+},
+null,
+2
+),
+},
+},
+event: [
+{
+listen: "test",
+script: {
+exec: testScripts,
+},
+},
+],
+},
+],
+};
+
+res.json(collection);
+} catch (error) {
+console.error(error);
+res.status(500).json({ error: "Failed to generate Postman collection" });
+}
+});
+
+module.exports = router;
+
+
+ async function generatePostmanRequests() {
             const storyName = document.getElementById('storyName').value;
             const acceptanceCriteria = document.getElementById('acceptanceCriteria').value;
             const endpoint = document.getElementById('apiEndpoint').value;
-
+ 
             if (!storyName || !acceptanceCriteria) {
                 showStatus('generationStatus', '❌ Please fill in story name and acceptance criteria', 'error');
                 return;
             }
-
+ 
             if (!currentConfig.aiApiKey) {
                 showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
                 return;
             }
-
+ 
             showStatus('generationStatus', '⏳ Generating Postman requests... <span class="loading"></span>', 'info');
-
+ 
             try {
                 const response = await fetch('/api/generate/postman', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ acceptanceCriteria, storyName, endpoint })
                 });
-
+ 
                 const data = await response.json();
-
+ 
                 if (response.ok) {
                     currentResults = data;
                     currentResultType = 'postman';
@@ -638,6 +719,7 @@
                 showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
+
 
         async function generateFromRalleyStory() {
             if (!selectedStory) {
