@@ -2,9 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const axios = require('axios');
 const RallyClient = require('./rally');
 const TestCaseGenerator = require('./testCaseGenerator');
 const PostmanGenerator = require('./postmanGenerator');
+const SwaggerParser = require('./utils/swaggerParser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -187,6 +189,91 @@ app.post('/api/export/postman', (req, res) => {
     res.send(JSON.stringify(collection, null, 2));
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Fetch and parse Swagger endpoints
+app.post('/api/generate/swagger-endpoints', async (req, res) => {
+  try {
+    let { swaggerUrl } = req.body;
+
+    if (!swaggerUrl) {
+      return res.status(400).json({ error: 'Swagger URL is required' });
+    }
+
+    // Helpful hint for common mistakes
+    if (swaggerUrl === 'https://petstore.swagger.io/' || swaggerUrl === 'https://petstore.swagger.io') {
+      swaggerUrl = 'https://petstore.swagger.io/v2/swagger.json';
+      console.log('📝 Detected Petstore UI URL, redirecting to actual spec:', swaggerUrl);
+    }
+
+    // Fetch the Swagger spec from the provided URL
+    console.log('🌐 Fetching from:', swaggerUrl);
+    const response = await axios.get(swaggerUrl, { timeout: 10000 });
+    let swaggerSpec = response.data;
+
+    console.log('📋 Swagger spec fetched successfully');
+    console.log('Response type:', typeof swaggerSpec);
+    console.log('Response keys:', Object.keys(swaggerSpec || {}).slice(0, 10));
+    
+    // Handle case where spec might be nested (e.g., inside a 'data' property)
+    if (swaggerSpec && typeof swaggerSpec === 'object' && !swaggerSpec.swagger && !swaggerSpec.openapi) {
+      // Check if it's nested in a property like 'data' or other wrapper
+      const possibleKeys = Object.keys(swaggerSpec);
+      const nestedSpec = possibleKeys.find(key => {
+        const val = swaggerSpec[key];
+        return val && typeof val === 'object' && (val.swagger || val.openapi);
+      });
+      
+      if (nestedSpec) {
+        console.log(`📍 Found Swagger spec nested in '${nestedSpec}' property`);
+        swaggerSpec = swaggerSpec[nestedSpec];
+      }
+    }
+
+    // Parse the Swagger spec
+    const parser = new SwaggerParser(swaggerSpec);
+    console.log('✅ Parser instantiated:', typeof parser, typeof parser.validate);
+    
+    // Validate the spec
+    try {
+      parser.validate();
+      console.log('✅ Swagger spec validated successfully');
+    } catch (validationError) {
+      console.error('❌ Validation error:', validationError.message);
+      return res.status(400).json({ error: `Invalid Swagger spec: ${validationError.message}` });
+    }
+
+    // Extract endpoints
+    const endpoints = parser.getEndpoints();
+    console.log(`📍 Found ${endpoints.length} endpoints`);
+
+    // Enrich endpoints with additional details
+    const enrichedEndpoints = endpoints.map(endpoint => {
+      const details = parser.getEndpointDetails(endpoint.path, endpoint.methods[0]);
+      return {
+        path: endpoint.path,
+        methods: endpoint.methods,
+        summary: details?.summary || '',
+        description: details?.description || '',
+        parameters: details?.parameters || [],
+        parameterCount: (details?.parameters || []).length
+      };
+    });
+
+    res.json({ 
+      endpoints: enrichedEndpoints,
+      swaggerVersion: swaggerSpec.swagger || swaggerSpec.openapi
+    });
+  } catch (error) {
+    console.error('❌ Swagger endpoint error:', error.message);
+    if (error.response) {
+      res.status(error.response.status).json({ error: `Failed to fetch Swagger: ${error.message}` });
+    } else if (error.code === 'ENOTFOUND') {
+      res.status(400).json({ error: 'Invalid URL: host not found' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

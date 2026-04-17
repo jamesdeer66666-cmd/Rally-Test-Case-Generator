@@ -341,6 +341,23 @@
 
             <!-- Manual Input Tab -->
             <div id="manual" class="tab-content active">
+                <!-- Swagger Input Section -->
+                <div class="form-group">
+                    <label for="swaggerUrl">Swagger/OpenAPI URL (Optional)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="swaggerUrl" placeholder="e.g., https://api.example.com/swagger.json">
+                        <button onclick="loadSwagger()" style="flex: 0 0 auto; padding: 12px 20px;">Load Swagger</button>
+                    </div>
+                </div>
+
+                <!-- Endpoints Selector (hidden until Swagger loads) -->
+                <div id="endpointsContainer" style="display: none; margin-bottom: 20px;">
+                    <h3 style="color: #333; margin-bottom: 10px; font-size: 1rem;">📡 Available Endpoints</h3>
+                    <div id="endpointsList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+                    </div>
+                    <p id="endpointStatus" style="color: #666; margin-top: 8px; font-size: 0.9rem;"></p>
+                </div>
+
                 <div class="form-group">
                     <label for="storyName">Story Name / Title</label>
                     <input type="text" id="storyName" placeholder="e.g., User Login Feature">
@@ -412,6 +429,7 @@
         let currentResults = {};
         let selectedStory = null;
         let currentResultType = 'testcases'; // 'testcases' or 'postman'
+        let selectedEndpoint = null; // Track selected Swagger endpoint
 
         // Update AI key label when provider changes
         document.addEventListener('DOMContentLoaded', function() {
@@ -719,7 +737,40 @@ module.exports = router;
                 showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
+async function loadSwagger() {  // Note: different name!
+    const swaggerUrl = document.getElementById('swaggerUrl').value;
 
+    if (!swaggerUrl) {
+        showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
+        return;
+    }
+
+    if (!currentConfig.aiApiKey) {
+        showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
+        return;
+    }
+
+    showStatus('generationStatus', '⏳ Fetching Swagger... <span class="loading"></span>', 'info');
+
+    try {
+        const response = await fetch('/api/generate/swagger-endpoints', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ swaggerUrl })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayEndpoints(data.endpoints);
+            showStatus('generationStatus', '✅ Endpoints loaded!', 'success');
+        } else {
+            showStatus('generationStatus', `❌ ${data.error}`, 'error');
+        }
+    } catch (error) {
+        showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
+    }
+}
 
         async function generateFromRalleyStory() {
             if (!selectedStory) {
@@ -794,6 +845,83 @@ module.exports = router;
                 console.error('Failed to copy: ', err);
                 alert('Failed to copy to clipboard. Please select and copy manually.');
             });
+        }
+
+        // Load and parse Swagger endpoints
+        async function loadSwagger() {
+            const swaggerUrl = document.getElementById('swaggerUrl').value;
+
+            if (!swaggerUrl) {
+                showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
+                return;
+            }
+
+            if (!currentConfig.aiApiKey) {
+                showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
+                return;
+            }
+
+            showStatus('generationStatus', '⏳ Fetching and parsing Swagger... <span class="loading"></span>', 'info');
+
+            try {
+                const response = await fetch('/api/generate/swagger-endpoints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ swaggerUrl })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayEndpoints(data.endpoints || []);
+                    showStatus('generationStatus', `✅ Swagger loaded! Found ${(data.endpoints || []).length} endpoints.`, 'success');
+                } else {
+                    showStatus('generationStatus', `❌ ${data.error}`, 'error');
+                    document.getElementById('endpointsContainer').style.display = 'none';
+                }
+            } catch (error) {
+                showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
+                document.getElementById('endpointsContainer').style.display = 'none';
+            }
+        }
+
+        // Display endpoints from Swagger
+        function displayEndpoints(endpoints) {
+            if (!endpoints || endpoints.length === 0) {
+                document.getElementById('endpointsContainer').style.display = 'none';
+                return;
+            }
+
+            const container = document.getElementById('endpointsList');
+            container.innerHTML = endpoints.map((endpoint, index) => `
+                <div style="padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 8px; cursor: pointer; transition: background 0.3s;" 
+                     onmouseover="this.style.background='#f0f0f0'; this.style.borderColor='#667eea';" 
+                     onmouseout="this.style.background='#f9f9f9'; this.style.borderColor='#ddd';"
+                     onclick="selectEndpoint(${index}, '${endpoint.path}', '${endpoint.methods.join(', ')}', '${endpoint.summary}')">
+                    <div style="font-weight: 600; color: #667eea;">${endpoint.methods.join('/')} ${endpoint.path}</div>
+                    ${endpoint.summary ? `<div style="color: #666; font-size: 0.9rem; margin-top: 4px;">${endpoint.summary}</div>` : ''}
+                    ${endpoint.parameterCount > 0 ? `<div style="color: #999; font-size: 0.85rem; margin-top: 4px;">📊 ${endpoint.parameterCount} parameter(s)</div>` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('endpointsContainer').style.display = 'block';
+            document.getElementById('endpointStatus').textContent = `Select an endpoint to auto-populate the Story Name and Acceptance Criteria`;
+        }
+
+        // Select endpoint and auto-populate fields
+        function selectEndpoint(index, path, methods, summary) {
+            selectedEndpoint = { path, methods, summary };
+            
+            // Auto-populate Story Name with endpoint summary or path
+            document.getElementById('storyName').value = summary || `API ${methods} ${path}`;
+            
+            // Auto-populate Acceptance Criteria with endpoint details
+            const ac = `Endpoint: ${methods.toUpperCase()} ${path}
+Summary: ${summary || 'N/A'}
+Description: Test the ${path} endpoint with various inputs and validate responses.`;
+            document.getElementById('acceptanceCriteria').value = ac;
+            
+            document.getElementById('endpointStatus').textContent = `✅ Selected: ${methods.toUpperCase()} ${path}`;
         }
     </script>
 </body>
