@@ -1,0 +1,31 @@
+{
+  "productName": "rally-ai-testcase-generator",
+  "version": "1.0.0",
+  "identifier": "com.rally.testcase-generator",
+
+  "build": {
+    "frontendDist": "../public"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "title": "Rally AI Test Case Generator",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+
+  "bundle": {
+    "active": true,
+    "resources": [
+      "resources/node/**"
+    ],
+    "icon": []
+  },
+
+  "plugins": {}
+}

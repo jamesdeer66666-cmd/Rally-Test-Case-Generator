@@ -1,0 +1,32 @@
+[package]
+name = "rally-ai-testcase-generator"
+version = "1.0.0"
+description = "Rally AI Test Case Generator"
+authors = ["you"]
+edition = "2021"
+
+[package.metadata]
+
+[package.metadata.tauri]
+
+[package.metadata.tauri-winres]
+PrivateKeyPath = ""
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2", features = [] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+[target."cfg(windows)"]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
