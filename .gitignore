@@ -1,3 +1,4 @@
+# Existing
 node_modules/
 .env
 .env.local
@@ -6,3 +7,17 @@ node_modules/
 dist/
 build/
 .DS_Store
+
+# =====================
+# Rust / Tauri (CRITICAL)
+# =====================
+target/
+src-tauri/target/
+
+# Rust compiled artifacts
+*.rlib
+*.rmeta
+
+# Windows debug symbols
+*.pdb
+``

@@ -114,7 +114,7 @@ NODE_ENV=development
 #### ✨ Google Gemini
 - **Cost**: Free tier + paid
 - **Setup**: https://ai.google.dev/
-- **Models**: Gemini 1.5
+- **Models**: Gemini 2.5 Flash
 - **Speed**: Good
 - **Best for**: Multi-modal tasks
 

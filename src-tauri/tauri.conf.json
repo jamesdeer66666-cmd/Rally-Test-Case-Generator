@@ -20,12 +20,12 @@
   },
 
   "bundle": {
-    "active": true,
-    "resources": [
-      "resources/node/**"
-    ],
-    "icon": []
-  },
+  "active": true,
+  "resources": [
+    "resources/node/**/*"
+  ],
+  "icon": ["icons/icon.ico"]
+},
 
   "plugins": {}
 }

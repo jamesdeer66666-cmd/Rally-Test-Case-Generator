@@ -425,6 +425,7 @@
     </div>
 
     <script>
+        const API_BASE = 'http://localhost:3000';
         let currentConfig = {};
         let currentResults = {};
         let selectedStory = null;
@@ -513,11 +514,11 @@
                     requestBody.openaiApiKey = aiApiKey; // Default to OpenAI
                 }
 
-                const response = await fetch('/api/config/validate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
+                const response = await fetch(`${API_BASE}/api/config/validate`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(requestBody)
+});
 
                 const data = await response.json();
 
@@ -541,9 +542,8 @@
             showStatus('storiesStatus', '⏳ Fetching stories...', 'info');
 
             try {
-                const response = await fetch('/api/rally/stories');
-                const data = await response.json();
-
+               const response = await fetch(`${API_BASE}/api/rally/stories`);
+const data = await response.json();
                 if (response.ok) {
                     displayStories(data.stories || []);
                     showStatus('storiesStatus', `✅ Loaded ${(data.stories || []).length} stories`, 'success');
@@ -597,11 +597,11 @@
             showStatus('generationStatus', '⏳ Generating test cases... <span class="loading"></span>', 'info');
 
             try {
-                const response = await fetch('/api/generate/testcases', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ acceptanceCriteria, storyName })
-                });
+                const response = await fetch(`${API_BASE}/api/generate/testcases`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ acceptanceCriteria, storyName })
+});
 
                 const data = await response.json();
 
@@ -617,87 +617,6 @@
                 showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
-
-       // server.js or routes file
-
-const express = require('express');
-const router = express.Router();
-
-router.post('/api/generate/postman', async (req, res) => {
-try {
-const { storyName, acceptanceCriteria, endpoint } = req.body;
-
-if (!storyName || !acceptanceCriteria) {
-return res.status(400).json({ error: "Missing required fields" });
-}
-
-// ✅ SAFE ENDPOINT (no validation, no fetch)
-const safeEndpoint =
-endpoint && endpoint.trim() !== ""
-? endpoint
-: "https://example.com/api/test";
-
-// ✅ Parse acceptance criteria into steps
-const steps = parseAcceptanceCriteria(acceptanceCriteria);
-
-// ✅ Generate Postman test scripts
-const testScripts = generateTestScripts(steps);
-
-// ✅ Build Postman collection
-const collection = {
-info: {
-name: `${storyName} Collection`,
-description: "Generated from user story",
-schema:
-"https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-},
-item: [
-{
-name: storyName,
-request: {
-method: "POST",
-header: [
-{
-key: "Content-Type",
-value: "application/json",
-},
-],
-url: {
-raw: safeEndpoint,
-host: [safeEndpoint],
-},
-body: {
-mode: "raw",
-raw: JSON.stringify(
-{
-sample: "data",
-},
-null,
-2
-),
-},
-},
-event: [
-{
-listen: "test",
-script: {
-exec: testScripts,
-},
-},
-],
-},
-],
-};
-
-res.json(collection);
-} catch (error) {
-console.error(error);
-res.status(500).json({ error: "Failed to generate Postman collection" });
-}
-});
-
-module.exports = router;
-
 
  async function generatePostmanRequests() {
             const storyName = document.getElementById('storyName').value;
@@ -717,11 +636,11 @@ module.exports = router;
             showStatus('generationStatus', '⏳ Generating Postman requests... <span class="loading"></span>', 'info');
  
             try {
-                const response = await fetch('/api/generate/postman', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ acceptanceCriteria, storyName, endpoint })
-                });
+                const response = await fetch(`${API_BASE}/api/generate/postman`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ acceptanceCriteria, storyName, endpoint })
+});
  
                 const data = await response.json();
  
@@ -737,39 +656,43 @@ module.exports = router;
                 showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
-async function loadSwagger() {  // Note: different name!
-    const swaggerUrl = document.getElementById('swaggerUrl').value;
+async function loadSwagger() {
+  const swaggerUrl = document.getElementById('swaggerUrl').value;
 
-    if (!swaggerUrl) {
-        showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
-        return;
+  if (!swaggerUrl) {
+    showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
+    return;
+  }
+
+  if (!currentConfig.aiApiKey) {
+    showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
+    return;
+  }
+
+  showStatus('generationStatus', '⏳ Fetching and parsing Swagger...', 'info');
+
+  try {
+    const response = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ swaggerUrl })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      displayEndpoints(data.endpoints || []);
+      showStatus(
+        'generationStatus',
+        `✅ Swagger loaded! Found ${(data.endpoints || []).length} endpoints.`,
+        'success'
+      );
+    } else {
+      showStatus('generationStatus', `❌ ${data.error}`, 'error');
     }
-
-    if (!currentConfig.aiApiKey) {
-        showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
-        return;
-    }
-
-    showStatus('generationStatus', '⏳ Fetching Swagger... <span class="loading"></span>', 'info');
-
-    try {
-        const response = await fetch('/api/generate/swagger-endpoints', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ swaggerUrl })
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            displayEndpoints(data.endpoints);
-            showStatus('generationStatus', '✅ Endpoints loaded!', 'success');
-        } else {
-            showStatus('generationStatus', `❌ ${data.error}`, 'error');
-        }
-    } catch (error) {
-        showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
-    }
+  } catch (error) {
+    showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
+  }
 }
 
         async function generateFromRalleyStory() {
@@ -845,44 +768,6 @@ async function loadSwagger() {  // Note: different name!
                 console.error('Failed to copy: ', err);
                 alert('Failed to copy to clipboard. Please select and copy manually.');
             });
-        }
-
-        // Load and parse Swagger endpoints
-        async function loadSwagger() {
-            const swaggerUrl = document.getElementById('swaggerUrl').value;
-
-            if (!swaggerUrl) {
-                showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
-                return;
-            }
-
-            if (!currentConfig.aiApiKey) {
-                showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
-                return;
-            }
-
-            showStatus('generationStatus', '⏳ Fetching and parsing Swagger... <span class="loading"></span>', 'info');
-
-            try {
-                const response = await fetch('/api/generate/swagger-endpoints', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ swaggerUrl })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    displayEndpoints(data.endpoints || []);
-                    showStatus('generationStatus', `✅ Swagger loaded! Found ${(data.endpoints || []).length} endpoints.`, 'success');
-                } else {
-                    showStatus('generationStatus', `❌ ${data.error}`, 'error');
-                    document.getElementById('endpointsContainer').style.display = 'none';
-                }
-            } catch (error) {
-                showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
-                document.getElementById('endpointsContainer').style.display = 'none';
-            }
         }
 
         // Display endpoints from Swagger
