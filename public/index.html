@@ -1,638 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rally AI Test Case Generator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rally AI Test Case Generator</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .card h2 {
-            color: #333;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="text"],
-        input[type="password"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-family: inherit;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .button-group button {
-            flex: 1;
-        }
-
-        .status {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-            display: block;
-        }
-
-        .output-section {
-            margin-top: 20px;
-        }
-
-        .output-section h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .output {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: #333;
-        }
-
-        .download-btn {
-            background: #28a745;
-            margin-top: 10px;
-        }
-
-        .download-btn:hover {
-            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .tab-button {
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .tab-button.active {
-            color: white;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom-color: #667eea;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .story-item {
-            padding: 12px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: background 0.3s, border-color 0.3s;
-        }
-
-        .story-item:hover {
-            background: #f0f0f0;
-            border-color: #667eea;
-        }
-
-        .story-item.selected {
-            background: #e8eef9;
-            border-color: #667eea;
-        }
-
-        .story-id {
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .story-name {
-            color: #333;
-            margin-top: 5px;
-        }
-    </style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: auto; }
+    header { text-align: center; color: white; margin-bottom: 30px; }
+    h1 { font-size: 2.4rem; }
+    .content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 800px) { .content { grid-template-columns: 1fr; } }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+    }
+    h2 { border-bottom: 3px solid #667eea; margin-bottom: 15px; padding-bottom: 8px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 2px solid #ddd;
+      font-size: 1rem;
+    }
+    button {
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      padding: 12px 25px;
+      cursor: pointer;
+    }
+    button:hover { opacity: .9; }
+    .button-group { display:flex; gap:10px; }
+    .tabs { display:flex; gap:10px; margin-bottom:15px; }
+    .tab-button {
+      background:white; color:#667eea;
+      border:none; border-bottom:3px solid transparent;
+      padding:10px 18px; cursor:pointer;
+    }
+    .tab-button.active {
+      background:#667eea; color:white;
+      border-bottom-color:#667eea;
+    }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    .status { display:none; padding:12px; border-radius:5px; margin-bottom:10px; }
+    .status.success { background:#d4edda; color:#155724; display:block; }
+    .status.error { background:#f8d7da; color:#721c24; display:block; }
+    .status.info { background:#d1ecf1; color:#0c5460; display:block; }
+    .output {
+      background:#f5f5f5;
+      border:1px solid #ddd;
+      padding:12px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height:350px;
+      overflow:auto;
+    }
+    .story-item {
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:5px;
+      margin-bottom:5px;
+      cursor:pointer;
+    }
+    .story-item:hover { background:#f0f0f0; }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <header>
-            <h1>🚀 Rally AI Test Case Generator</h1>
-            <p class="subtitle">Transform Acceptance Criteria into AI-Generated Test Cases and Postman Requests</p>
-        </header>
+<div class="container">
+  <header>
+    <h1>🚀 Rally AI Test Case Generator</h1>
+    <p>Acceptance criteria → Structured test cases</p>
+  </header>
 
-        <div class="content">
-            <!-- Configuration Panel -->
-            <div class="card">
-                <h2>⚙️ Configuration</h2>
-                <div id="configStatus"></div>
-                
-                <div class="form-group">
-                    <label for="aiProvider">AI Provider (Select One)</label>
-                    <select id="aiProvider">
-                        <option value="groq">🚀 GROQ (Free, Recommended)</option>
-                        <option value="openai">🤖 OpenAI GPT-4</option>
-                        <option value="gemini">✨ Google Gemini</option>
-                        <option value="claude">🧠 Claude 3.5 Sonnet</option>
-                    </select>
-                </div>
+  <div class="content">
 
-                <div class="form-group">
-                    <label for="aiApiKey" id="aiKeyLabel">GROQ API Key</label>
-                    <input type="password" id="aiApiKey" placeholder="Get free key from https://console.groq.com/keys">
-                </div>
+    <div class="card">
+      <h2>⚙️ Configuration</h2>
+      <div id="configStatus"></div>
 
-                <div class="form-group">
-                    <label for="rallyApiKey">Rally API Key (Optional)</label>
-                    <input type="password" id="rallyApiKey" placeholder="Your Rally API key (leave blank to skip)">
-                </div>
+      <div class="form-group">
+        <label for="aiProvider">AI Provider</label>
+        <select id="aiProvider">
+          <option value="groq">GROQ</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="claude">Claude</option>
+        </select>
+      </div>
 
-                <div class="form-group">
-                    <label for="rallyWorkspaceUrl">Rally Workspace URL (Optional)</label>
-                    <input type="text" id="rallyWorkspaceUrl" placeholder="https://rally1.rallydev.com">
-                </div>
+      <div class="form-group">
+        <label id="aiKeyLabel">AI API Key</label>
+        <input type="password" id="aiApiKey" placeholder="Enter API key"/>
+      </div>
 
-                <button onclick="validateConfiguration()">✓ Validate Configuration</button>
-            </div>
-
-            <!-- Rally Stories Panel -->
-            <div class="card">
-                <h2>📋 Rally Stories</h2>
-                <div id="storiesStatus"></div>
-                
-                <button onclick="fetchStories()" style="width: 100%;">Fetch Stories from Rally</button>
-                
-                <div class="output-section" style="margin-top: 20px;">
-                    <h3>Available Stories:</h3>
-                    <div id="storiesList" class="output" style="max-height: 300px; padding: 0;">
-                        <p style="padding: 15px; color: #999;">No stories loaded. Fetch from Rally first.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Generation Panel -->
-        <div class="card">
-            <h2>🧪 Generate Test Cases & Postman Requests</h2>
-            <div id="generationStatus"></div>
-
-            <div class="tabs">
-                <button class="tab-button active" onclick="switchTab('manual')">Manual Input</button>
-                <button class="tab-button" onclick="switchTab('fromralley')">From Rally Story</button>
-            </div>
-
-            <!-- Manual Input Tab -->
-            <div id="manual" class="tab-content active">
-                <!-- Swagger Input Section -->
-                <div class="form-group">
-                    <label for="swaggerUrl">Swagger/OpenAPI URL (Optional)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="swaggerUrl" placeholder="e.g., https://api.example.com/swagger.json">
-                        <button onclick="loadSwagger()" style="flex: 0 0 auto; padding: 12px 20px;">Load Swagger</button>
-                    </div>
-                </div>
-
-                <!-- Endpoints Selector (hidden until Swagger loads) -->
-                <div id="endpointsContainer" style="display: none; margin-bottom: 20px;">
-                    <h3 style="color: #333; margin-bottom: 10px; font-size: 1rem;">📡 Available Endpoints</h3>
-                    <div id="endpointsList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
-                    </div>
-                    <p id="endpointStatus" style="color: #666; margin-top: 8px; font-size: 0.9rem;"></p>
-                </div>
-
-                <div class="form-group">
-                    <label for="storyName">Story Name / Title</label>
-                    <input type="text" id="storyName" placeholder="e.g., User Login Feature">
-                </div>
-
-                <div class="form-group">
-                    <label for="acceptanceCriteria">Acceptance Criteria</label>
-                    <textarea id="acceptanceCriteria" placeholder="Enter acceptance criteria here...&#10;&#10;Example:&#10;- Given a user is on the login page&#10;- When they enter valid credentials&#10;- Then they should be logged in successfully"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="apiEndpoint">API Endpoint (Optional - for Postman generation)</label>
-                    <input type="text" id="apiEndpoint" placeholder="e.g., https://api.example.com/auth/login (leave blank for generic requests)">
-                </div>
-
-                <div class="button-group">
-                    <button onclick="generateTestCases()">Generate Test Cases</button>
-                    <button onclick="generatePostmanRequests()">Generate Postman Requests</button>
-                </div>
-            </div>
-
-            <!-- From Rally Tab -->
-            <div id="fromralley" class="tab-content">
-                <div class="form-group">
-                    <label for="selectedStoryId">Select Story</label>
-                    <input type="text" id="selectedStoryId" placeholder="e.g., US123" readonly>
-                </div>
-
-                <div id="selectedStoryDetails"></div>
-
-                <div class="form-group">
-                    <label for="rallyApiEndpoint">API Endpoint (Optional)</label>
-                    <input type="text" id="rallyApiEndpoint" placeholder="https://api.example.com/endpoint (leave blank for generic requests)">
-                </div>
-
-                <div class="button-group">
-                    <button onclick="generateFromRalleyStory()">Generate Both (Test Cases + Postman)</button>
-                </div>
-            </div>
-
-            <!-- Output Section -->
-            <div class="output-section" id="outputSection" style="display: none;">
-                <div class="tabs">
-                    <button class="tab-button active" onclick="switchOutputTab('raw')">AI Generated Text</button>
-                    <button class="tab-button" onclick="switchOutputTab('parsed')" id="parsedTabButton">Structured Data</button>
-                </div>
-
-                <div id="raw" class="tab-content active">
-                    <h3>AI Generated Output:</h3>
-                    <div id="rawOutput" class="output"></div>
-                </div>
-
-                <div id="parsed" class="tab-content">
-                    <h3 id="parsedOutputTitle">Structured Data:</h3>
-                    <div id="parsedOutput" class="output"></div>
-                    <div style="margin-top: 10px; text-align: center;">
-                        <button onclick="copyToClipboard()" style="background: #17a2b8; margin-right: 10px;">📋 Copy JSON</button>
-                    </div>
-                </div>
-
-                <button class="download-btn" onclick="downloadResults()">📥 Download Results as JSON</button>
-                <button class="download-btn" style="background:#007bff;" onclick="downloadTextResults()">📄 Download as TXT</button>
-            </div>
-        </div>
+      <button onclick="validateConfiguration()">✓ Validate Configuration</button>
     </div>
 
-    <script>
+    <div class="card">
+      <h2>🧪 Generate Test Cases</h2>
+      <div id="generationStatus"></div>
+
+      <div class="form-group">
+        <label>Story Name</label>
+        <input id="storyName">
+      </div>
+
+      <div class="form-group">
+        <label>Acceptance Criteria</label>
+        <textarea id="acceptanceCriteria"></textarea>
+      </div>
+
+      <button onclick="generateTestCases()">Generate Test Cases</button>
+    </div>
+  </div>
+
+  <div id="outputSection" style="display:none;" class="card">
+    <h2>📄 Output</h2>
+    <div id="rawOutput" class="output"></div>
+  </div>
+</div>
+
+<script>
 const API_BASE = "http://localhost:3000";
-
 let currentConfig = {};
-let currentResults = {};
-let selectedStory = null;
-let currentResultType = "testcases";
-let selectedEndpoint = null;
 
-// --------------------------------------------------
-// Helpers
-// --------------------------------------------------
-function showStatus(elementId, message, type = "info") {
-  const el = document.getElementById(elementId);
-  el.textContent = message;
-  el.className = `status ${type}`;
-  el.style.display = "block";
-  if (type === "success") {
-    setTimeout(() => (el.style.display = "none"), 5000);
+/* ---------------- API Key Label Logic ---------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  const provider = document.getElementById("aiProvider");
+  const label = document.getElementById("aiKeyLabel");
+  const input = document.getElementById("aiApiKey");
+
+  const config = {
+    groq: ["GROQ API Key","https://console.groq.com/keys"],
+    openai: ["OpenAI API Key","https://platform.openai.com/api-keys"],
+    gemini: ["Google Gemini API Key","https://ai.google.dev"],
+    claude: ["Claude API Key","https://console.anthropic.com"]
+  };
+
+  function update() {
+    const [text, url] = config[provider.value];
+    label.textContent = text;
+    input.placeholder = `Get key from ${url}`;
+    input.value = "";
   }
+
+  provider.addEventListener("change", update);
+  update();
+});
+
+/* ---------------- Helpers ---------------- */
+function showStatus(id,msg,type) {
+  const el=document.getElementById(id);
+  el.className=`status ${type}`;
+  el.textContent=msg;
+  el.style.display="block";
 }
 
-// --------------------------------------------------
-// Tabs
-// --------------------------------------------------
-function switchTab(evt, tabName) {
-  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".tab-button").forEach(el => el.classList.remove("active"));
-  document.getElementById(tabName).classList.add("active");
-  evt.target.classList.add("active");
-}
-
-function switchOutputTab(evt, tabName) {
-  document.querySelectorAll("#outputSection .tab-content").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll("#outputSection .tab-button").forEach(el => el.classList.remove("active"));
-  document.getElementById(tabName).classList.add("active");
-  evt.target.classList.add("active");
-}
-
-// --------------------------------------------------
-// Validation
-// --------------------------------------------------
+/* ---------------- Config ---------------- */
 async function validateConfiguration() {
-  const aiProvider = document.getElementById("aiProvider").value;
-  const aiApiKey = document.getElementById("aiApiKey").value;
-  const rallyApiKey = document.getElementById("rallyApiKey").value;
-  const rallyWorkspaceUrl = document.getElementById("rallyWorkspaceUrl").value;
+  const provider=document.getElementById("aiProvider").value;
+  const apiKey=document.getElementById("aiApiKey").value;
 
-  if (!aiApiKey) {
-    showStatus("configStatus", "❌ Please enter your AI API key", "error");
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/api/config/validate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        provider: aiProvider,
-        apiKey: aiApiKey,
-        rallyApiKey,
-        rallyWorkspaceUrl
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      showStatus("configStatus", `❌ ${data.error}`, "error");
-      return;
-    }
-
-    currentConfig = { aiProvider, aiApiKey, rallyApiKey, rallyWorkspaceUrl };
-    showStatus("configStatus", `✅ ${aiProvider.toUpperCase()} configured successfully!`, "success");
-  } catch (err) {
-    showStatus("configStatus", `❌ ${err.message}`, "error");
-  }
-}
-
-// --------------------------------------------------
-// Rally
-// --------------------------------------------------
-async function fetchStories() {
-  showStatus("storiesStatus", "⏳ Fetching stories...", "info");
-
-  try {
-    const response = await fetch(`${API_BASE}/api/rally/stories`);
-    const data = await response.json();
-
-    if (!response.ok) {
-      showStatus("storiesStatus", `❌ ${data.error}`, "error");
-      return;
-    }
-
-    displayStories(data.stories || []);
-    showStatus("storiesStatus", `✅ Loaded ${data.stories.length} stories`, "success");
-  } catch (err) {
-    showStatus("storiesStatus", `❌ ${err.message}`, "error");
-  }
-}
-
-function displayStories(stories) {
-  const container = document.getElementById("storiesList");
-  if (!stories.length) {
-    container.innerHTML = "<p style='padding:15px;color:#999'>No stories found</p>";
-    return;
-  }
-
-  container.innerHTML = stories.map(story => `
-    <div class="story-item" onclick="selectStory('${story.FormattedID}','${story.Name}')">
-      <div class="story-id">${story.FormattedID}</div>
-      <div class="story-name">${story.Name}</div>
-    </div>
-  `).join("");
-}
-
-function selectStory(id, name) {
-  selectedStory = { id, name };
-  document.getElementById("selectedStoryId").value = id;
-  document.getElementById("selectedStoryDetails").innerHTML =
-    `<p>📌 Selected: <strong>${name}</strong></p>`;
-}
-
-// --------------------------------------------------
-// Swagger
-// --------------------------------------------------
-async function loadSwagger() {
-  const swaggerUrl = document.getElementById("swaggerUrl").value;
-  if (!swaggerUrl) {
-    showStatus("generationStatus", "❌ Enter a Swagger URL", "error");
-    return;
-  }
-
-  showStatus("generationStatus", "⏳ Loading Swagger...", "info");
-
-  const response = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ swaggerUrl })
+  const res=await fetch(`${API_BASE}/api/config/validate`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({provider,apiKey})
   });
 
-  const data = await response.json();
+  const data=await res.json();
+  if(!res.ok) return showStatus("configStatus",data.error,"error");
 
-  if (!response.ok) {
-    showStatus("generationStatus", `❌ ${data.error}`, "error");
-    return;
-  }
-
-  displayEndpoints(data.endpoints || []);
-  showStatus("generationStatus", `✅ Loaded ${data.endpoints.length} endpoints`, "success");
+  currentConfig={provider,apiKey};
+  showStatus("configStatus","✅ Configured","success");
 }
 
-function displayEndpoints(endpoints) {
-  const container = document.getElementById("endpointsList");
-
-  container.innerHTML = endpoints.map((e, i) => `
-    <div class="story-item" onclick="selectEndpoint(${i},'${e.path}','${e.methods.join(",")}','${e.summary}')">
-      <div><strong>${e.methods.join("/")} ${e.path}</strong></div>
-      <div>${e.summary}</div>
-    </div>
-  `).join("");
-
-  document.getElementById("endpointsContainer").style.display = "block";
-}
-
-function selectEndpoint(i, path, methods, summary) {
-  document.getElementById("storyName").value = summary || `${methods} ${path}`;
-  document.getElementById("acceptanceCriteria").value =
-    `Endpoint: ${methods} ${path}\nSummary: ${summary}`;
-}
-
-// --------------------------------------------------
-// Generation
-// --------------------------------------------------
+/* ---------------- Generate ---------------- */
 async function generateTestCases() {
-  const storyName = document.getElementById("storyName").value;
-  const acceptanceCriteria = document.getElementById("acceptanceCriteria").value;
+  const storyName=document.getElementById("storyName").value;
+  const acceptanceCriteria=document.getElementById("acceptanceCriteria").value;
 
-  showStatus("generationStatus", "⏳ Generating test cases...", "info");
-
-  const response = await fetch(`${API_BASE}/api/generate/testcases`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      provider: currentConfig.aiProvider,
-      apiKey: currentConfig.aiApiKey,
-      storyName,
-      acceptanceCriteria
-    })
+  const res=await fetch(`${API_BASE}/api/generate/testcases`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({...currentConfig,storyName,acceptanceCriteria})
   });
 
-  const data = await response.json();
+  const data=await res.json();
+  if(!res.ok) return showStatus("generationStatus",data.error,"error");
 
-  if (!response.ok) {
-    showStatus("generationStatus", `❌ ${data.error}`, "error");
-    return;
-  }
-
-  currentResults = data;
-  currentResultType = "testcases";
-  displayResults(data);
-  showStatus("generationStatus", "✅ Generated!", "success");
-}
-
-function displayResults(data) {
-  document.getElementById("outputSection").style.display = "block";
-  document.getElementById("rawOutput").textContent = data.rawOutput;
-  document.getElementById("parsedOutput").textContent =
-    JSON.stringify(data.parsedTestCases || data, null, 2);
+  document.getElementById("outputSection").style.display="block";
+  document.getElementById("rawOutput").textContent=data.rawOutput;
+  showStatus("generationStatus","✅ Generated","success");
 }
 </script>
 </body>
