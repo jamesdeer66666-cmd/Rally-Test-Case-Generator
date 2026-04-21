@@ -176,6 +176,62 @@ res.status(500).json({ error: error.message });
 }
 });
 
+// ============================================================
+// ✅ COMBINED GENERATION (OPTION C)
+// ============================================================
+app.post('/api/generate/combined', async (req, res) => {
+  try {
+    if (!testCaseGenerator) {
+      return res.status(400).json({ error: 'AI client not configured' });
+    }
+
+    const { acceptanceCriteria, storyName, endpoint } = req.body;
+
+    if (!acceptanceCriteria || !storyName) {
+      return res.status(400).json({
+        error: 'Missing acceptanceCriteria or storyName'
+      });
+    }
+
+    // 1️⃣ Generate test cases
+    const testCaseResult = await testCaseGenerator.generateTestCases(
+      acceptanceCriteria,
+      storyName
+    );
+
+    const testCases = testCaseResult.testCases || [];
+
+    // 2️⃣ Generate Postman intents
+    const intents = await testCaseGenerator.generatePostmanIntent(
+      acceptanceCriteria,
+      storyName,
+      endpoint
+    );
+
+    // 3️⃣ Build Postman collection
+    const collection = PostmanGenerator.generateCollection(
+      intents,
+      `${storyName} API Tests`
+    );
+
+    res.json({
+      testCases,
+      postman: collection
+    });
+
+  } catch (err) {
+    console.error('❌ COMBINED GENERATION ERROR:', err);
+
+    if (err.code === 'AI_QUOTA_EXCEEDED') {
+      return res.status(429).json({
+        code: err.code,
+        message: err.userMessage
+      });
+    }
+
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Export Postman collection
 app.post('/api/export/postman', (req, res) => {
