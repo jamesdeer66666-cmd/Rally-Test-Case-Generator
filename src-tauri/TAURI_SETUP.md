@@ -1,114 +1,70 @@
-# Tauri Conversion - Setup Guide
+# Tauri Setup Guide
 
-## What Was Created
+## What this repo contains
 
-```
-src-tauri/
-├── tauri.conf.json      # Tauri configuration
-├── Cargo.toml           # Rust dependencies
-├── build.rs             # Build script
-└── src/
-    └── main.rs          # Rust backend that spawns and controls a Node.js backend process
-``
+This project is built as a Tauri desktop wrapper around a Node.js API backend.
 
+- `src-tauri/src/main.rs` launches the Tauri application and starts the Node.js backend.
+- `src-tauri/resources/node/server.js` is the actual Express server.
+- `public/index.html` is the web UI loaded by the frontend.
 
-## Prerequisites to Complete Setup
+## Required tools
 
-1. **Install Rust**
-   - Download: https://rustup.rs/
-   - Run the installer and follow instructions
-   - Verify: `rustc --version` and `cargo --version`
+- Node.js 14 or higher
+- npm
+- Rust toolchain (for Tauri development): `rustc --version`, `cargo --version`
+- Optional: `@tauri-apps/cli`
 
-2. **Verify your system has Node.js in PATH**
-   - The Tauri app will spawn `node src/server.js` automatically
-   - Verify: Open PowerShell and run `node --version`
+## How Tauri starts the backend
 
-## Next Steps
+In development mode, `src-tauri/src/main.rs` spawns:
 
-### 1. Update Frontend to Use Tauri API
+- `src-tauri/resources/node/server.js`
 
-The current frontend uses `fetch()` calls. With Tauri, you need to:
-- Keep `fetch()` calls (they'll hit `http://localhost:3000` from the bundled Node server)
-- OR use Tauri commands for direct Rust-to-Frontend communication
+That backend listens on `http://localhost:3000` by default.
 
-**Current setup keeps it simple**: 
-- Tauri spawns your Node.js server on startup
-- Frontend continues using `fetch()` as-is
-- No code changes needed in frontend!
+## Running the app in development
 
-### 2. Build & Run in Development
+From the repo root:
 
-```bash
+```powershell
+npm install
 npm run tauri:dev
 ```
 
-This will:
-- Launch a Tauri window
-- Start your Node.js server automatically
-- Open your HTML/CSS/JS from the `public/` folder
+This command:
 
-### 3. Build for Production
+- builds the Tauri desktop application in development mode
+- opens a desktop window
+- starts the Node.js backend automatically
 
-```bash
-npm run tauri:build
-```
+## Backend entry point
 
-This will create a standalone `.exe` that bundles:
-- Your Node.js server
-- Your frontend HTML/CSS/JS
-- Rust microkernel
+The current backend entry point is:
 
-### Changes Made
+- `src-tauri/resources/node/server.js`
 
-✅ `package.json` - Added Tauri scripts
-✅ `src-tauri/` - Created Rust project structure
-✅ `src-tauri/src/main.rs` - Spawns Node server, bridges desktop window
-✅ `src-tauri/tauri.conf.json` - Points to `public/` folder for assets
+This file loads environment variables from `src-tauri/resources/node/.env` when present.
 
-## Folder Structure (Final)
+## Frontend behavior
 
-```
-Rally-Test-Case-Generator/
-├── public/                 # Frontend (HTML/CSS/JS) - UNCHANGED
-├── src/                    # Backend (Node.js)     - UNCHANGED
-├── src-tauri/              # Desktop app (Tauri)   - NEW
-│   ├── src/main.rs
-│   ├── tauri.conf.json
-│   ├── Cargo.toml
-│   └── build.rs
-└── package.json            # Updated with Tauri scripts
+The current static frontend uses `fetch()` calls to the backend API.
 
-```
+- It is not served by the backend itself.
+- The frontend must load `public/index.html` from the browser or from the Tauri app.
 
-## How It Works
+## Recommended local workflow
 
-1. User launches the `.exe` (or runs `npm run tauri:dev`)
-2. Tauri (Rust) starts up and creates a window
-3. `main.rs` spawns Node.js server (`node src/server.js`)
-4. Frontend loads from `public/index.html`
-5. Frontend makes API calls to `http://localhost:3000/api/...`
-6. Node.js server processes them
-7. No internet needed - fully offline!
+1. Start the backend directly:
+   ```powershell
+   node .\src-tauri\resources\node\server.js
+   ```
+2. Open `public/index.html` in your browser.
+3. Or run the Tauri wrapper:
+   ```powershell
+   npm run tauri:dev
+   ```
 
-## Troubleshooting
+## Important note
 
-**Issue**: "Rust not found"
-- Solution: Install Rust from https://rustup.rs/
-
-**Issue**: "Node command not found"
-- Solution: Ensure Node.js is in your PATH
-- Verify: `node --version` in PowerShell
-
-**Issue**: "tauri command not found"
-- Solution: Run `npm install -D @tauri-apps/cli` again
-
-## Optional: Advanced Customizations
-
-Once working, you can:
-- Move business logic to Rust for better performance
-- Add system tray icon
-- Add auto-updates
-- Create installers for distribution
-- Use Tauri commands instead of HTTP calls
-
-Start with: `npm run tauri:dev`
+The Tauri wrapper does not launch `node src/server.js`. It launches the backend from `src-tauri/resources/node/server.js` in development mode.

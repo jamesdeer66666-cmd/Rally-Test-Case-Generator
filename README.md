@@ -1,277 +1,121 @@
-<<<<<<< HEAD
-# Rally AI Test Case Generator
+﻿# Rally AI Test Case Generator
 
-> **Transform Rally Acceptance Criteria into AI-Generated Test Cases and Postman Requests**
+A lightweight Tauri + Node.js app for turning Rally acceptance criteria into AI-generated test cases and Postman collections.
 
-A powerful web application that bridges Rally project management with AI-driven test automation, automatically generating comprehensive test cases and API testing collections from acceptance criteria.
+## Quick Start
 
-## 🚀 Quick Start
-
-### Prerequisites
+### Requirements
 - Node.js 14 or higher
-- Rally API credentials
-- OpenAI API key
+- npm
+- Optional: Rust + Tauri CLI if you want to run the desktop build
+- Valid AI API key for OpenAI, GROQ, or Google Gemini
 
-### Installation
+### 1) Run the backend locally
+
+The current backend entry point is:
+
+- `src-tauri/resources/node/server.js`
+
+From the repository root:
+
+```powershell
+npm install
+copy .env.example src-tauri/resources/node/.env
+node .\src-tauri\resources\node\server.js
+```
+
+If you prefer Bash:
 
 ```bash
-# Install dependencies
 npm install
-
-# Create environment file
-cp .env.example .env
-
-# Edit .env with your credentials
-# RALLY_API_KEY=your_api_key
-# OPENAI_API_KEY=your_api_key
-
-# Start development server
-npm run dev
-
-# Or production
-npm start
+cp .env.example src-tauri/resources/node/.env
+node src-tauri/resources/node/server.js
 ```
 
-Open your browser to `http://localhost:3000`
+### 2) Open the frontend
 
-## 📋 Features
+The web UI is a static page at `public/index.html`. Open that file in your browser and make sure the backend is running on `http://localhost:3000`.
 
-### 🔗 Rally Integration
-- Fetch user stories directly from Rally
-- Extract acceptance criteria automatically
-- View story details and metadata
+### 3) Run the Tauri desktop app
 
-### 🤖 AI-Powered Test Generation
-- Generate detailed test cases using GPT-4
-- Structured output with test steps, preconditions, and expected results
-- Automatic priority classification (High/Medium/Low)
+The repository also includes a Tauri wrapper. Use this command from the project root:
 
-### 📮 Postman Integration
-- Auto-generate API test requests
-- Create complete collections for import into Postman
-- Include headers, body templates, and test assertions
-
-### 💾 Export & Download
-- Download test cases as JSON
-- Export Postman collections ready to import
-- Support for batch operations
-
-## 🎯 How It Works
-
-1. **Configure APIs**: Enter Rally and OpenAI credentials
-2. **Input AC**: Provide acceptance criteria (manual or from Rally)
-3. **Generate**: Click to generate test cases and/or Postman requests
-4. **Download**: Export as JSON for use in your testing workflow
-
-## 📁 Project Structure
-
-```
-src/
-  ├── server.js              # Express server & API routes
-  ├── rally.js               # Rally API client
-  ├── testCaseGenerator.js   # GPT-4 test case generation
-  └── postmanGenerator.js    # Postman collection generation
-
-public/
-  └── index.html             # Web UI interface
+```powershell
+npm run tauri:dev
 ```
 
-### Environment Variables
+This launches the desktop app and automatically starts the Node.js backend from `src-tauri/resources/node/server.js`.
 
-Create a `.env` file (copy from `.env.example`):
+## Current Project Layout
+
+```
+Rally-Test-Case-Generator/
+  public/
+    index.html
+  src-tauri/
+    resources/
+      node/
+        server.js
+        rally.js
+        testCaseGenerator.js
+        utils/
+          postmanGenerator.js
+          swaggerParser.js
+    src/
+      main.rs
+    tauri.conf.json
+    Cargo.toml
+  .env.example
+  package.json
+  DEVELOPMENT.md
+  src-tauri/TAURI_SETUP.md
+```
+
+## What the app does today
+
+- Accepts AI provider selection in the UI
+- Validates credentials via `POST /api/config/validate`
+- Generates combined AI test cases and Postman request definitions via `POST /api/generate/combined`
+- Loads Swagger/OpenAPI endpoints via `POST /api/generate/swagger-endpoints`
+- Exposes raw AI output and parsed results to the frontend
+
+## Current Backend API
+
+- `GET /api/health`
+- `POST /api/config/validate`
+- `POST /api/generate/combined`
+- `POST /api/generate/postman`
+- `POST /api/generate/testcases`
+- `POST /api/generate/swagger-endpoints`
+- `POST /api/export/postman`
+- `GET /api/rally/stories`
+- `GET /api/rally/story/:formattedId`
+
+> Note: The current frontend uses the config validation, combined generation, and Swagger endpoint routes.
+
+## Environment and runtime notes
+
+The Node backend loads `.env` from `src-tauri/resources/node/.env` if present. That file is useful for configuring `PORT` and runtime settings.
+
+Example `.env` values:
 
 ```env
-# Rally Configuration
-RALLY_API_KEY=your_rally_api_key
-RALLY_WORKSPACE_URL=https://rally1.rallydev.com
-
-# AI Provider Configuration  
-# Choose: openai, groq, gemini, or claude
-AI_PROVIDER=groq
-AI_API_KEY=your_ai_api_key
-
-# Server Configuration
 PORT=3000
 NODE_ENV=development
 ```
 
-### AI Provider Options
+The UI sends AI credentials in the validation request body, so the current frontend does not rely on API keys being present in the backend `.env` file.
 
-#### 🚀 GROQ (Recommended - Free)
-- **Cost**: Completely free
-- **Setup**: https://console.groq.com/keys
-- **Models**: Mixtral 8x7B, Meta Llama 2
-- **Speed**: Very fast inference
-- **Best for**: Testing, development
+## Usage summary
 
-#### 🤖 OpenAI
-- **Cost**: Pay-as-you-go ($0.01-0.05 per test)
-- **Setup**: https://platform.openai.com/api/keys
-- **Models**: GPT-4 (most powerful)
-- **Speed**: Standard
-- **Best for**: Production, high quality
+1. Start the backend with `node src-tauri/resources/node/server.js`
+2. Open `public/index.html` in a browser
+3. Choose an AI provider
+4. Paste your API key
+5. Enter story name and acceptance criteria
+6. Click Generate to receive test cases and Postman output
 
-#### ✨ Google Gemini
-- **Cost**: Free tier + paid
-- **Setup**: https://ai.google.dev/
-- **Models**: Gemini 2.5 Flash
-- **Speed**: Good
-- **Best for**: Multi-modal tasks
+## Notes
 
-#### 🧠 Claude (Anthropic)
-- **Cost**: Pay-as-you-go ($0.01-0.05 per test)
-- **Setup**: https://console.anthropic.com/
-- **Models**: Claude 3.5 Sonnet (most powerful)
-- **Speed**: Good
-- **Best for**: High quality, safety-focused
-
-## 📚 API Endpoints
-
-### Configuration
-- `POST /api/config/validate` - Validate API credentials
-
-### Rally
-- `GET /api/rally/stories` - List all user stories
-- `GET /api/rally/story/:formattedId` - Get story AC
-
-### Generation
-- `POST /api/generate/testcases` - Generate test cases
-- `POST /api/generate/postman` - Generate Postman requests
-- `POST /api/export/postman` - Export collection
-
-## 🎮 Usage Examples
-
-### Generate from Manual Input
-```
-1. Go to "Manual Input" tab
-2. Enter story name: "User Login"
-3. Paste acceptance criteria
-4. Click "Generate Test Cases"
-5. Download results as JSON or plain text using the buttons provided
-```
-
-### Generate from Rally Story
-```
-1. Click "Fetch Stories"
-2. Select a story from list
-3. Enter API endpoint
-4. Click "Generate Both"
-5. Review and download
-```
-
-## 🔐 Security Notes
-
-- Never commit `.env` files with real API keys
-- Use environment variables in production
-- Rotate API keys regularly
-- Restrict API key permissions in both Rally and OpenAI
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "Configuration not validated" | Check all API keys are correct in .env |
-| Rally connection fails | Verify API key and workspace URL |
-| OpenAI timeout | Reduce AC size or increase timeout |
-| Port already in use | Change PORT in .env file |
-
-## 🚀 Development
-
-```bash
-# Install dev dependencies
-npm install --save-dev nodemon
-
-# Run with auto-reload
-npm run dev
-
-# Run tests (when added)
-npm test
-```
-
-## 📝 Sample Output
-
-### Generated Test Case
-```
-Test Case ID: TC001
-Title: Valid Login with Correct Credentials
-Description: Verify user can login with valid credentials
-Preconditions:
-  - User is on login page
-  - Database has test user
-Steps:
-  1. Enter valid username
-  2. Click password field
-  3. Enter correct password
-  4. Click Login button
-Expected Result: User redirected to dashboard
-Priority: High
-```
-
-### Generated Postman Request
-```json
-{
-  "name": "Login with Valid Credentials",
-  "request": {
-    "method": "POST",
-    "url": "https://api.example.com/auth/login",
-    "header": [
-      {"key": "Content-Type", "value": "application/json"}
-    ],
-    "body": {
-      "mode": "raw",
-      "raw": "{\"username\": \"testuser\", \"password\": \"testpass\"}"
-    }
-  },
-  "event": [
-    {
-      "listen": "test",
-      "script": "pm.test(\"Status code is 200\", () => { pm.response.to.have.status(200); })"
-    }
-  ]
-}
-```
-
-## 💡 Tips
-
-- **Large AC**: Break into smaller pieces for better test case quality
-- **API Endpoints**: Include full URLs for accurate Postman generation  
-- **Batch Processing**: Generate both test cases and requests together
-- **Iteration**: Refine generated output as needed
-
-## 📦 Dependencies
-
-- **express** - Web server framework
-- **openai** - GPT-4 integration
-- **axios** - HTTP client for Rally API
-- **cors** - Cross-origin resource sharing
-- **dotenv** - Environment configuration
-- **body-parser** - Request body parsing
-
-## 🤝 Contributing
-
-Contributions welcome! Areas for improvement:
-- Additional test case templates
-- More AI model options
-- Database persistence
-- CI/CD integration
-- UI enhancements
-
-## 📄 License
-
-MIT License - See LICENSE file
-
-## 🆘 Support
-
-For issues:
-1. Check troubleshooting section
-2. Verify all credentials are correct
-3. Check applicable API services status
-4. Review error messages in console logs
-
----
-
-**Built with ❤️ for QA Automation Engineers**
-=======
-# Rally-Test-Case-Generator
-Test case genertor for rally
->>>>>>> 9d0fe769796660f02db431fc4b9342c6bfda71c4
+- The backend does not serve the UI file directly.
+- If you want the desktop app experience, use `npm run tauri:dev`.
