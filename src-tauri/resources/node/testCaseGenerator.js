@@ -48,27 +48,6 @@ class TestCaseGenerator {
   }
 }
 
-  async generatePostmanRequests(acceptanceCriteria, storyName, endpoint = "") {
-    try {
-      const prompt = this.buildPostmanPrompt(
-        acceptanceCriteria,
-        storyName,
-        endpoint
-      );
-
-      const raw = await this.generate(prompt, "Postman collection");
-
-      const cleaned = this.sanitizeJsonResponse(raw);
-      const parsed = this.safeJsonParse(cleaned);
-
-      return JSON.stringify(parsed, null, 2);
-
-    } catch (err) {
-      console.error("❌ POSTMAN ERROR:", err.message);
-      throw err;
-    }
-  }
-
   // =====================================================================
   // PROVIDER ROUTING
   // =====================================================================
@@ -408,6 +387,99 @@ async generateWithOpenAI(prompt) {
 
   throw err;
 }
+}
+// =====================================================================
+// generatePostmanintent
+// =====================================================================
+async generatePostmanIntent(acceptanceCriteria, storyName, endpoint = "") {
+  try {
+    const prompt = `
+Return ONLY valid JSON.
+No markdown. No explanations.
+
+Generate API request definitions for Postman.
+
+Schema:
+[
+  {
+    "name": "string",
+    "method": "GET|POST|PUT|DELETE|PATCH",
+    "endpoint": "/api/example",
+    "body": {},
+    "validations": [
+      { "type": "status", "value": 200 }
+    ]
+  }
+]
+
+Story:
+${storyName}
+
+Acceptance Criteria:
+${acceptanceCriteria}
+
+Endpoint:
+${endpoint}
+`;
+
+    const raw = await this.generate(prompt, "Postman intents");
+
+    const cleaned = this.sanitizeJsonResponse(raw);
+    return this.safeJsonParse(cleaned);
+
+  } catch (err) {
+    if (err.code === "AI_QUOTA_EXCEEDED") {
+      throw err;
+    }
+
+    console.error("❌ POSTMAN INTENT ERROR:", err.message);
+    return [];
+  }
+}
+// =====================================================================
+// The Orchestrator Method
+// =====================================================================
+async generateTestCasesAndPostman({
+  acceptanceCriteria,
+  storyName,
+  endpoint = "",
+  collectionName = "Rally API Tests"
+}) {
+  // 1️⃣ Generate test cases
+  const testCasesResult = await this.generateTestCases(
+    acceptanceCriteria,
+    storyName
+  );
+
+  const testCases = testCasesResult.testCases;
+
+  // ✅ If AI returns nothing (non-quota failure)
+  if (!testCases.length) {
+    return {
+      testCases: [],
+      postman: null
+    };
+  }
+
+  // 2️⃣ Generate Postman intent
+  const postmanIntents = await this.generatePostmanIntent(
+    acceptanceCriteria,
+    storyName,
+    endpoint
+  );
+
+  // 3️⃣ Build Postman collection
+  const PostmanGenerator = require("./PostmanGenerator");
+
+  const collection = PostmanGenerator.generateCollection(
+    postmanIntents,
+    collectionName
+  );
+
+  return {
+    testCases,
+    postman: collection
+  };
 }
 
   // =====================================================================
