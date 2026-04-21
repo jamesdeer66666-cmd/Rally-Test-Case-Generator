@@ -425,389 +425,215 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:3000';
-        let currentConfig = {};
-        let currentResults = {};
-        let selectedStory = null;
-        let currentResultType = 'testcases'; // 'testcases' or 'postman'
-        let selectedEndpoint = null; // Track selected Swagger endpoint
+const API_BASE = "http://localhost:3000";
 
-        // Update AI key label when provider changes
-        document.addEventListener('DOMContentLoaded', function() {
-          const providerSelect = document.getElementById('aiProvider');
-          const keyLabel = document.getElementById('aiKeyLabel');
-          const keyInput = document.getElementById('aiApiKey');
-          
-          const providerLabels = {
-            'groq': 'GROQ API Key (Free)',
-            'openai': 'OpenAI API Key',
-            'gemini': 'Google Gemini API Key',
-            'claude': 'Claude API Key'
-          };
+let currentConfig = {};
+let currentResults = {};
+let selectedStory = null;
+let currentResultType = "testcases";
+let selectedEndpoint = null;
 
-          const providerPlaceholders = {
-            'groq': 'Get free key from https://console.groq.com/keys',
-            'openai': 'Get key from https://platform.openai.com/api/keys',
-            'gemini': 'Get key from https://ai.google.dev',
-            'claude': 'Get key from https://console.anthropic.com'
-          };
+// --------------------------------------------------
+// Helpers
+// --------------------------------------------------
+function showStatus(elementId, message, type = "info") {
+  const el = document.getElementById(elementId);
+  el.textContent = message;
+  el.className = `status ${type}`;
+  el.style.display = "block";
+  if (type === "success") {
+    setTimeout(() => (el.style.display = "none"), 5000);
+  }
+}
 
-          if (providerSelect) {
-            providerSelect.addEventListener('change', function() {
-              keyLabel.textContent = providerLabels[this.value] || 'API Key';
-              keyInput.placeholder = providerPlaceholders[this.value];
-            });
-          }
-        });
+// --------------------------------------------------
+// Tabs
+// --------------------------------------------------
+function switchTab(evt, tabName) {
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".tab-button").forEach(el => el.classList.remove("active"));
+  document.getElementById(tabName).classList.add("active");
+  evt.target.classList.add("active");
+}
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
+function switchOutputTab(evt, tabName) {
+  document.querySelectorAll("#outputSection .tab-content").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll("#outputSection .tab-button").forEach(el => el.classList.remove("active"));
+  document.getElementById(tabName).classList.add("active");
+  evt.target.classList.add("active");
+}
 
-        function switchOutputTab(tabName) {
-            document.querySelectorAll('#outputSection .tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('#outputSection .tab-button').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
+// --------------------------------------------------
+// Validation
+// --------------------------------------------------
+async function validateConfiguration() {
+  const aiProvider = document.getElementById("aiProvider").value;
+  const aiApiKey = document.getElementById("aiApiKey").value;
+  const rallyApiKey = document.getElementById("rallyApiKey").value;
+  const rallyWorkspaceUrl = document.getElementById("rallyWorkspaceUrl").value;
 
-        function showStatus(elementId, message, type = 'info') {
-            const statusEl = document.getElementById(elementId);
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
-            statusEl.style.display = 'block';
-            if (type === 'success') {
-                setTimeout(() => statusEl.style.display = 'none', 5000);
-            }
-        }
-
-        async function validateConfiguration() {
-            const aiProvider = document.getElementById('aiProvider').value;
-            const aiApiKey = document.getElementById('aiApiKey').value;
-            const rallyApiKey = document.getElementById('rallyApiKey').value;
-            const rallyWorkspaceUrl = document.getElementById('rallyWorkspaceUrl').value;
-
-            if (!aiApiKey) {
-                showStatus('configStatus', '❌ Please enter your AI API key', 'error');
-                return;
-            }
-
-            try {
-                // Prepare the request body with the correct API key field name
-                const requestBody = {
-                    aiProvider: aiProvider,
-                    rallyApiKey: rallyApiKey,
-                    rallyWorkspaceUrl: rallyWorkspaceUrl
-                };
-
-                // Add the API key with the correct field name based on provider
-                if (aiProvider === 'groq') {
-                    requestBody.groqApiKey = aiApiKey;
-                } else if (aiProvider === 'gemini') {
-                    requestBody.geminiApiKey = aiApiKey;
-                } else if (aiProvider === 'claude') {
-                    requestBody.claudeApiKey = aiApiKey;
-                } else {
-                    requestBody.openaiApiKey = aiApiKey; // Default to OpenAI
-                }
-
-                const response = await fetch(`${API_BASE}/api/config/validate`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(requestBody)
-});
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    currentConfig = { aiProvider, aiApiKey, rallyApiKey, rallyWorkspaceUrl };
-                    showStatus('configStatus', `✅ ${aiProvider.toUpperCase()} configured successfully!`, 'success');
-                } else {
-                    showStatus('configStatus', `❌ ${data.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus('configStatus', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function fetchStories() {
-            if (!currentConfig.rallyApiKey) {
-                showStatus('storiesStatus', '❌ Please validate configuration first', 'error');
-                return;
-            }
-
-            showStatus('storiesStatus', '⏳ Fetching stories...', 'info');
-
-            try {
-               const response = await fetch(`${API_BASE}/api/rally/stories`);
-const data = await response.json();
-                if (response.ok) {
-                    displayStories(data.stories || []);
-                    showStatus('storiesStatus', `✅ Loaded ${(data.stories || []).length} stories`, 'success');
-                } else {
-                    showStatus('storiesStatus', `❌ ${data.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus('storiesStatus', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
-        function displayStories(stories) {
-            const container = document.getElementById('storiesList');
-            if (!stories || stories.length === 0) {
-                container.innerHTML = '<p style="padding: 15px; color: #999;">No stories found</p>';
-                return;
-            }
-
-            container.innerHTML = stories.map(story => `
-                <div class="story-item" onclick="selectStory('${story.FormattedID}', '${story.Name.replace(/'/g, "\\'")}')">
-                    <div class="story-id">${story.FormattedID}</div>
-                    <div class="story-name">${story.Name}</div>
-                </div>
-            `).join('');
-        }
-
-        function selectStory(storyId, storyName) {
-            selectedStory = { id: storyId, name: storyName };
-            document.getElementById('selectedStoryId').value = storyId;
-            document.querySelectorAll('.story-item').forEach(el => el.classList.remove('selected'));
-            event.target.closest('.story-item').classList.add('selected');
-            
-            const details = `<p style="color: #666; margin-top: 10px;">📌 Selected: <strong>${storyName}</strong></p>`;
-            document.getElementById('selectedStoryDetails').innerHTML = details;
-        }
-
-        async function generateTestCases() {
-            const storyName = document.getElementById('storyName').value;
-            const acceptanceCriteria = document.getElementById('acceptanceCriteria').value;
-
-            if (!storyName || !acceptanceCriteria) {
-                showStatus('generationStatus', '❌ Please fill in story name and acceptance criteria', 'error');
-                return;
-            }
-
-            if (!currentConfig.aiApiKey) {
-                showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
-                return;
-            }
-
-            showStatus('generationStatus', '⏳ Generating test cases... <span class="loading"></span>', 'info');
-
-            try {
-                const response = await fetch(`${API_BASE}/api/generate/testcases`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ acceptanceCriteria, storyName })
-});
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    currentResults = data;
-                    currentResultType = 'testcases';
-                    displayResults(data);
-                    showStatus('generationStatus', '✅ Test cases generated successfully!', 'success');
-                } else {
-                    showStatus('generationStatus', `❌ ${data.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
- async function generatePostmanRequests() {
-            const storyName = document.getElementById('storyName').value;
-            const acceptanceCriteria = document.getElementById('acceptanceCriteria').value;
-            const endpoint = document.getElementById('apiEndpoint').value;
- 
-            if (!storyName || !acceptanceCriteria) {
-                showStatus('generationStatus', '❌ Please fill in story name and acceptance criteria', 'error');
-                return;
-            }
- 
-            if (!currentConfig.aiApiKey) {
-                showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
-                return;
-            }
- 
-            showStatus('generationStatus', '⏳ Generating Postman requests... <span class="loading"></span>', 'info');
- 
-            try {
-                const response = await fetch(`${API_BASE}/api/generate/postman`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ acceptanceCriteria, storyName, endpoint })
-});
- 
-                const data = await response.json();
- 
-                if (response.ok) {
-                    currentResults = data;
-                    currentResultType = 'postman';
-                    displayResults(data);
-                    showStatus('generationStatus', '✅ Postman requests generated successfully!', 'success');
-                } else {
-                    showStatus('generationStatus', `❌ ${data.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-async function loadSwagger() {
-  const swaggerUrl = document.getElementById('swaggerUrl').value;
-
-  if (!swaggerUrl) {
-    showStatus('generationStatus', '❌ Please enter a Swagger/OpenAPI URL', 'error');
+  if (!aiApiKey) {
+    showStatus("configStatus", "❌ Please enter your AI API key", "error");
     return;
   }
-
-  if (!currentConfig.aiApiKey) {
-    showStatus('generationStatus', '❌ Please configure AI provider first', 'error');
-    return;
-  }
-
-  showStatus('generationStatus', '⏳ Fetching and parsing Swagger...', 'info');
 
   try {
-    const response = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ swaggerUrl })
+    const response = await fetch(`${API_BASE}/api/config/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: aiProvider,
+        apiKey: aiApiKey,
+        rallyApiKey,
+        rallyWorkspaceUrl
+      })
     });
 
     const data = await response.json();
 
-    if (response.ok) {
-      displayEndpoints(data.endpoints || []);
-      showStatus(
-        'generationStatus',
-        `✅ Swagger loaded! Found ${(data.endpoints || []).length} endpoints.`,
-        'success'
-      );
-    } else {
-      showStatus('generationStatus', `❌ ${data.error}`, 'error');
+    if (!response.ok) {
+      showStatus("configStatus", `❌ ${data.error}`, "error");
+      return;
     }
-  } catch (error) {
-    showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
+
+    currentConfig = { aiProvider, aiApiKey, rallyApiKey, rallyWorkspaceUrl };
+    showStatus("configStatus", `✅ ${aiProvider.toUpperCase()} configured successfully!`, "success");
+  } catch (err) {
+    showStatus("configStatus", `❌ ${err.message}`, "error");
   }
 }
 
-        async function generateFromRalleyStory() {
-            if (!selectedStory) {
-                showStatus('generationStatus', '❌ Please select a story first', 'error');
-                return;
-            }
+// --------------------------------------------------
+// Rally
+// --------------------------------------------------
+async function fetchStories() {
+  showStatus("storiesStatus", "⏳ Fetching stories...", "info");
 
-            // Endpoint is now optional
-            const endpoint = document.getElementById('rallyApiEndpoint').value;
+  try {
+    const response = await fetch(`${API_BASE}/api/rally/stories`);
+    const data = await response.json();
 
-            showStatus('generationStatus', '⏳ Generating from Rally story... <span class="loading"></span>', 'info');
+    if (!response.ok) {
+      showStatus("storiesStatus", `❌ ${data.error}`, "error");
+      return;
+    }
 
-            try {
-                // This would require fetching the story's AC first
-                alert('Fetch story AC and generate - implementation in progress');
-            } catch (error) {
-                showStatus('generationStatus', `❌ Error: ${error.message}`, 'error');
-            }
-        }
+    displayStories(data.stories || []);
+    showStatus("storiesStatus", `✅ Loaded ${data.stories.length} stories`, "success");
+  } catch (err) {
+    showStatus("storiesStatus", `❌ ${err.message}`, "error");
+  }
+}
 
-        function displayResults(data) {
-            document.getElementById('outputSection').style.display = 'block';
-            
-            // Show raw AI output
-            document.getElementById('rawOutput').textContent = data.rawOutput || JSON.stringify(data, null, 2);
-            
-            // Update tab labels and content based on result type
-            const parsedTabButton = document.getElementById('parsedTabButton');
-            const parsedOutputTitle = document.getElementById('parsedOutputTitle');
-            
-            if (currentResultType === 'postman' && data.collection) {
-                // For Postman, show the collection JSON that can be imported
-                parsedTabButton.textContent = 'Postman Collection JSON';
-                parsedOutputTitle.textContent = 'Postman Collection JSON (Copy & Import):';
-                document.getElementById('parsedOutput').textContent = JSON.stringify(data.collection, null, 2);
-            } else {
-                // For test cases, show the parsed test cases
-                parsedTabButton.textContent = 'Structured Data';
-                parsedOutputTitle.textContent = 'Structured Data:';
-                document.getElementById('parsedOutput').textContent = JSON.stringify(data.parsedTestCases || data.parsedRequests || data, null, 2);
-            }
-        }
+function displayStories(stories) {
+  const container = document.getElementById("storiesList");
+  if (!stories.length) {
+    container.innerHTML = "<p style='padding:15px;color:#999'>No stories found</p>";
+    return;
+  }
 
-        function downloadResults() {
-            if (!currentResults || Object.keys(currentResults).length === 0) {
-                alert('No results to download');
-                return;
-            }
+  container.innerHTML = stories.map(story => `
+    <div class="story-item" onclick="selectStory('${story.FormattedID}','${story.Name}')">
+      <div class="story-id">${story.FormattedID}</div>
+      <div class="story-name">${story.Name}</div>
+    </div>
+  `).join("");
+}
 
-            const dataStr = JSON.stringify(currentResults, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `test-cases-${new Date().getTime()}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-        }
+function selectStory(id, name) {
+  selectedStory = { id, name };
+  document.getElementById("selectedStoryId").value = id;
+  document.getElementById("selectedStoryDetails").innerHTML =
+    `<p>📌 Selected: <strong>${name}</strong></p>`;
+}
 
-        function copyToClipboard() {
-            const outputElement = document.getElementById('parsedOutput');
-            const text = outputElement.textContent;
-            
-            navigator.clipboard.writeText(text).then(function() {
-                // Show temporary success message
-                const originalText = outputElement.textContent;
-                outputElement.textContent = '✅ Copied to clipboard!';
-                setTimeout(() => {
-                    outputElement.textContent = originalText;
-                }, 2000);
-            }).catch(function(err) {
-                console.error('Failed to copy: ', err);
-                alert('Failed to copy to clipboard. Please select and copy manually.');
-            });
-        }
+// --------------------------------------------------
+// Swagger
+// --------------------------------------------------
+async function loadSwagger() {
+  const swaggerUrl = document.getElementById("swaggerUrl").value;
+  if (!swaggerUrl) {
+    showStatus("generationStatus", "❌ Enter a Swagger URL", "error");
+    return;
+  }
 
-        // Display endpoints from Swagger
-        function displayEndpoints(endpoints) {
-            if (!endpoints || endpoints.length === 0) {
-                document.getElementById('endpointsContainer').style.display = 'none';
-                return;
-            }
+  showStatus("generationStatus", "⏳ Loading Swagger...", "info");
 
-            const container = document.getElementById('endpointsList');
-            container.innerHTML = endpoints.map((endpoint, index) => `
-                <div style="padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 8px; cursor: pointer; transition: background 0.3s;" 
-                     onmouseover="this.style.background='#f0f0f0'; this.style.borderColor='#667eea';" 
-                     onmouseout="this.style.background='#f9f9f9'; this.style.borderColor='#ddd';"
-                     onclick="selectEndpoint(${index}, '${endpoint.path}', '${endpoint.methods.join(', ')}', '${endpoint.summary}')">
-                    <div style="font-weight: 600; color: #667eea;">${endpoint.methods.join('/')} ${endpoint.path}</div>
-                    ${endpoint.summary ? `<div style="color: #666; font-size: 0.9rem; margin-top: 4px;">${endpoint.summary}</div>` : ''}
-                    ${endpoint.parameterCount > 0 ? `<div style="color: #999; font-size: 0.85rem; margin-top: 4px;">📊 ${endpoint.parameterCount} parameter(s)</div>` : ''}
-                </div>
-            `).join('');
+  const response = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ swaggerUrl })
+  });
 
-            document.getElementById('endpointsContainer').style.display = 'block';
-            document.getElementById('endpointStatus').textContent = `Select an endpoint to auto-populate the Story Name and Acceptance Criteria`;
-        }
+  const data = await response.json();
 
-        // Select endpoint and auto-populate fields
-        function selectEndpoint(index, path, methods, summary) {
-            selectedEndpoint = { path, methods, summary };
-            
-            // Auto-populate Story Name with endpoint summary or path
-            document.getElementById('storyName').value = summary || `API ${methods} ${path}`;
-            
-            // Auto-populate Acceptance Criteria with endpoint details
-            const ac = `Endpoint: ${methods.toUpperCase()} ${path}
-Summary: ${summary || 'N/A'}
-Description: Test the ${path} endpoint with various inputs and validate responses.`;
-            document.getElementById('acceptanceCriteria').value = ac;
-            
-            document.getElementById('endpointStatus').textContent = `✅ Selected: ${methods.toUpperCase()} ${path}`;
-        }
-    </script>
+  if (!response.ok) {
+    showStatus("generationStatus", `❌ ${data.error}`, "error");
+    return;
+  }
+
+  displayEndpoints(data.endpoints || []);
+  showStatus("generationStatus", `✅ Loaded ${data.endpoints.length} endpoints`, "success");
+}
+
+function displayEndpoints(endpoints) {
+  const container = document.getElementById("endpointsList");
+
+  container.innerHTML = endpoints.map((e, i) => `
+    <div class="story-item" onclick="selectEndpoint(${i},'${e.path}','${e.methods.join(",")}','${e.summary}')">
+      <div><strong>${e.methods.join("/")} ${e.path}</strong></div>
+      <div>${e.summary}</div>
+    </div>
+  `).join("");
+
+  document.getElementById("endpointsContainer").style.display = "block";
+}
+
+function selectEndpoint(i, path, methods, summary) {
+  document.getElementById("storyName").value = summary || `${methods} ${path}`;
+  document.getElementById("acceptanceCriteria").value =
+    `Endpoint: ${methods} ${path}\nSummary: ${summary}`;
+}
+
+// --------------------------------------------------
+// Generation
+// --------------------------------------------------
+async function generateTestCases() {
+  const storyName = document.getElementById("storyName").value;
+  const acceptanceCriteria = document.getElementById("acceptanceCriteria").value;
+
+  showStatus("generationStatus", "⏳ Generating test cases...", "info");
+
+  const response = await fetch(`${API_BASE}/api/generate/testcases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      provider: currentConfig.aiProvider,
+      apiKey: currentConfig.aiApiKey,
+      storyName,
+      acceptanceCriteria
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    showStatus("generationStatus", `❌ ${data.error}`, "error");
+    return;
+  }
+
+  currentResults = data;
+  currentResultType = "testcases";
+  displayResults(data);
+  showStatus("generationStatus", "✅ Generated!", "success");
+}
+
+function displayResults(data) {
+  document.getElementById("outputSection").style.display = "block";
+  document.getElementById("rawOutput").textContent = data.rawOutput;
+  document.getElementById("parsedOutput").textContent =
+    JSON.stringify(data.parsedTestCases || data, null, 2);
+}
+</script>
 </body>
 </html>

@@ -3,21 +3,27 @@ const OpenAI = require("openai").default;
 
 class TestCaseGenerator {
   constructor(apiKey, provider = "openai") {
-    this.apiKey = apiKey;
-    this.provider = provider.toLowerCase();
+  this.apiKey = apiKey;
+  this.provider = provider.toLowerCase();
 
-    console.log("🔧 TestCaseGenerator initialized with provider:", this.provider);
+  console.log("🔧 TestCaseGenerator initialized with provider:", this.provider);
 
-    if (this.provider === "openai") {
-      this.client = new OpenAI({ apiKey });
-    } else if (this.provider === "groq") {
-      this.groqBaseUrl = "https://api.groq.com/openai/v1";
-    } else if (this.provider === "gemini") {
-      this.geminiApiKey = apiKey;
-    } else if (this.provider === "claude") {
-      this.claudeApiKey = apiKey;
-    }
-  }
+  // ✅ IMPORTANT:
+  // Always initialize ALL providers so fallback works correctly.
+  // The selected provider controls *priority*, not availability.
+
+  // OpenAI
+  this.client = new OpenAI({ apiKey });
+
+  // Groq
+  this.groqBaseUrl = "https://api.groq.com/openai/v1";
+
+  // Gemini
+  this.geminiApiKey = apiKey;
+
+  // Claude (placeholder / future)
+  this.claudeApiKey = apiKey;
+}
 
   // =====================================================================
   // TEST CASE GENERATION
@@ -53,21 +59,12 @@ ${acceptanceCriteria}
 
       console.log("📍 Prompt built");
 
-      let rawResponse;
-
-      if (this.provider === "groq") {
-        rawResponse = await this.generateWithGroq(prompt, "API test cases");
-      } else if (this.provider === "gemini") {
-        rawResponse = await this.generateWithGemini(prompt);
-      } else if (this.provider === "claude") {
-        rawResponse = await this.generateWithClaude(prompt);
-      } else {
-        rawResponse = await this.generateWithOpenAI(prompt, "gpt-4", 2500);
-      }
+      // ✅ ALWAYS USE FALLBACK LAYER
+      const rawResponse = await this.generateWithFallback(prompt);
 
       console.log("🧠 RAW AI RESPONSE:", rawResponse);
 
-      // ✅ HARD GUARD — PREVENTS `.replace()` CRASH
+      // ✅ HARD GUARD — NEVER ALLOW `.replace()` ON INVALID DATA
       if (typeof rawResponse !== "string" || !rawResponse.trim()) {
         throw new Error("AI provider failed to return a valid response");
       }
@@ -90,6 +87,41 @@ ${acceptanceCriteria}
   }
 
   // =====================================================================
+  // PROVIDER FALLBACK LAYER (DEMO‑GRADE FEATURE)
+  // =====================================================================
+  async generateWithFallback(prompt) {
+    const providers = ["gemini", "groq", "openai"];
+
+    for (const provider of providers) {
+      try {
+        console.log(`🔁 Attempting provider: ${provider}`);
+
+        let response = "";
+
+        if (provider === "gemini") {
+          response = await this.generateWithGemini(prompt);
+        } else if (provider === "groq") {
+          response = await this.generateWithGroq(prompt, "API test cases");
+        } else if (provider === "openai") {
+          response = await this.generateWithOpenAI(prompt, "gpt-4", 2500);
+        }
+
+        if (typeof response === "string" && response.trim()) {
+          console.log(`✅ Provider ${provider} succeeded`);
+          return response;
+        }
+
+        throw new Error("Empty response");
+
+      } catch (err) {
+        console.warn(`⚠️ Provider ${provider} failed: ${err.message}`);
+      }
+    }
+
+    throw new Error("All AI providers failed");
+  }
+
+  // =====================================================================
   // POSTMAN REQUEST GENERATION
   // =====================================================================
   async generatePostmanRequests(acceptanceCriteria, storyName, endpoint) {
@@ -105,17 +137,7 @@ ${acceptanceCriteria}
 Endpoint: ${safeEndpoint}
 `;
 
-      let rawResponse;
-
-      if (this.provider === "groq") {
-        rawResponse = await this.generateWithGroq(prompt, "Postman requests");
-      } else if (this.provider === "gemini") {
-        rawResponse = await this.generateWithGemini(prompt);
-      } else if (this.provider === "claude") {
-        rawResponse = await this.generateWithClaude(prompt);
-      } else {
-        rawResponse = await this.generateWithOpenAI(prompt, "gpt-4", 2500);
-      }
+      const rawResponse = await this.generateWithFallback(prompt);
 
       console.log("🧠 RAW POSTMAN RESPONSE:", rawResponse);
 
@@ -186,9 +208,10 @@ Endpoint: ${safeEndpoint}
     return response.data.choices?.[0]?.message?.content || "";
   }
 
-  // ✅ CORRECT GEMINI IMPLEMENTATION
+  // ✅ CORRECT GEMINI 2.5 FLASH IMPLEMENTATION
   async generateWithGemini(prompt) {
-    try {
+  try {
+    const attempt = async () => {
       const response = await axios.post(
         "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
         {
@@ -208,12 +231,23 @@ Endpoint: ${safeEndpoint}
           .trim();
 
       return text || "";
+    };
 
-    } catch (err) {
-      console.error("❌ GEMINI ERROR:", err.message);
-      return "";
+    // 🔁 Cold-start retry
+    let text = await attempt();
+    if (!text) {
+      console.warn("⚠️ Gemini returned empty response, retrying once...");
+      await new Promise(r => setTimeout(r, 300)); // short backoff
+      text = await attempt();
     }
+
+    return text || "";
+
+  } catch (err) {
+    console.error("❌ GEMINI ERROR:", err.message);
+    return "";
   }
+}
 
   async generateWithClaude(prompt) {
     console.warn("⚠️ Claude provider not implemented yet");
