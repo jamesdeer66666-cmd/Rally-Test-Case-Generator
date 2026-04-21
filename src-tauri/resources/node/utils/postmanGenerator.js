@@ -2,7 +2,6 @@
 class PostmanGenerator {
 
   static generateCollection(requestsData, collectionName = 'Rally API Tests') {
-
     // ✅ Normalize AI output into an array
     const requestsArray =
       Array.isArray(requestsData)
@@ -25,7 +24,31 @@ class PostmanGenerator {
   }
 
   static createRequest(requestData) {
-    // your existing implementation
+    return {
+      name: requestData.name || 'API Request',
+      request: {
+        method: requestData.method || 'GET',
+        header: [],
+        url: {
+          raw: requestData.endpoint || '/api/example',
+          path: (requestData.endpoint || '/api/example')
+            .split('/')
+            .filter(Boolean)
+        }
+      },
+      event: requestData.validations
+        ? [{
+            listen: 'test',
+            script: {
+              exec: requestData.validations.map(v =>
+                v.type === 'status'
+                  ? `pm.test("Status ${v.value}", () => pm.response.to.have.status(${v.value}));`
+                  : ''
+              )
+            }
+          }]
+        : []
+    };
   }
 }
 

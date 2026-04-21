@@ -6,30 +6,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --muted: #6c757d;
+    }
+
     body {
-      font-family: system-ui, sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      padding: 20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      margin: 0;
+      padding: 30px;
       color: #333;
     }
 
     .container {
-      max-width: 1000px;
+      max-width: 1100px;
       margin: 0 auto;
     }
 
-    h1 {
-      color: white;
+    header {
       text-align: center;
-      margin-bottom: 30px;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      opacity: 0.9;
     }
 
     .card {
-      background: white;
+      background: var(--card);
+      border-radius: 12px;
       padding: 24px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 6px;
     }
 
     label {
@@ -42,59 +67,88 @@
     input, textarea, select {
       width: 100%;
       padding: 10px;
-      border-radius: 4px;
+      border-radius: 6px;
       border: 1px solid #ccc;
+      font-size: 0.95rem;
     }
 
-    textarea {
-      min-height: 100px;
-    }
+    textarea { min-height: 110px; }
 
     button {
       margin-top: 16px;
       padding: 12px;
       width: 100%;
-      background: #667eea;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 1rem;
       cursor: pointer;
     }
 
-    button:hover {
-      background: #5a67d8;
+    button.secondary {
+      background: #e9ecf5;
+      color: #333;
+    }
+
+    button:disabled {
+      opacity: 0.6;
     }
 
     .status {
       margin-top: 12px;
       padding: 10px;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-size: 0.9rem;
     }
 
     .status.success { background: #d4edda; color: #155724; }
-    .status.error { background: #f8d7da; color: #721c24; }
-    .status.info { background: #d1ecf1; color: #0c5460; }
+    .status.error   { background: #f8d7da; color: #721c24; }
+    .status.info    { background: #d1ecf1; color: #0c5460; }
 
     .endpoint {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-top: 6px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-top: 8px;
       cursor: pointer;
+      font-size: 0.9rem;
     }
 
     .endpoint:hover {
-      background: #eef;
+      background: #f2f5ff;
+      border-color: var(--primary);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: #e9ecf5;
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
     }
 
     pre {
-      background: #f5f5f5;
-      padding: 12px;
-      border-radius: 4px;
-      max-height: 400px;
+      background: #f5f6fa;
+      padding: 14px;
+      border-radius: 6px;
+      max-height: 420px;
       overflow: auto;
       white-space: pre-wrap;
+      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -102,62 +156,78 @@
 <body>
 <div class="container">
 
+<header>
   <h1>🚀 Rally AI Test Case Generator</h1>
+  <p>From Swagger → Test Cases → Postman, in seconds</p>
+</header>
 
-  <!-- ================= AI CONFIG ================= -->
-  <div class="card">
-    <h2>AI Configuration</h2>
+<!-- ================= AI CONFIG ================= -->
+<div class="card">
+  <h2>⚙️ AI Configuration</h2>
 
-    <label>AI Provider</label>
-    <select id="aiProvider">
-      <option value="groq">GROQ</option>
-      <option value="openai">OpenAI</option>
-      <option value="gemini">Gemini</option>
-    </select>
+  <label>AI Provider</label>
+  <select id="aiProvider">
+    <option value="groq">GROQ</option>
+    <option value="openai">OpenAI</option>
+    <option value="gemini">Gemini</option>
+  </select>
 
-    <label>API Key</label>
-    <input type="password" id="apiKey">
+  <label>API Key</label>
+  <input type="password" id="apiKey">
 
-    <button onclick="validateConfig()">Validate Configuration</button>
-    <div id="configStatus"></div>
+  <button onclick="validateConfig()">Validate Configuration</button>
+  <div id="configStatus"></div>
+</div>
+
+<!-- ================= SWAGGER ================= -->
+<div class="card">
+  <h2>📡 Swagger / OpenAPI</h2>
+
+  <label>Swagger URL</label>
+  <input id="swaggerUrl" value="https://petstore.swagger.io/">
+
+  <button class="secondary" onclick="loadSwagger()">Load Endpoints</button>
+
+  <div id="swaggerStatus"></div>
+  <div id="swaggerEndpoints"></div>
+</div>
+
+<!-- ================= GENERATE ================= -->
+<div class="card">
+  <h2>🧪 Generate</h2>
+
+  <label>Story Name</label>
+  <input id="storyName">
+
+  <label>Acceptance Criteria</label>
+  <textarea id="acceptanceCriteria"></textarea>
+
+  <label>API Endpoint (optional)</label>
+  <input id="apiEndpoint">
+
+  <button onclick="generate()">Generate Test Cases + Postman</button>
+  <div id="generationStatus"></div>
+
+  <div class="tabs">
+    <div class="tab-btn active" onclick="showTab('testcases')">Test Cases</div>
+    <div class="tab-btn" onclick="showTab('postman')">Postman</div>
   </div>
 
-  <!-- ================= SWAGGER ================= -->
-  <div class="card">
-    <h2>Swagger / OpenAPI</h2>
-
-    <label>Swagger URL (optional)</label>
-    <input id="swaggerUrl" value="https://petstore.swagger.io/">
-
-    <button onclick="loadSwagger()">Load Swagger</button>
-    <div id="swaggerStatus"></div>
-    <div id="swaggerEndpoints"></div>
+  <div id="testcasesTab">
+    <pre id="testCasesOutput"></pre>
   </div>
 
-  <!-- ================= GENERATE ================= -->
-  <div class="card">
-    <h2>Generate</h2>
-
-    <label>Story Name</label>
-    <input id="storyName">
-
-    <label>Acceptance Criteria</label>
-    <textarea id="acceptanceCriteria"></textarea>
-
-    <label>API Endpoint (optional)</label>
-    <input id="apiEndpoint">
-
-    <button onclick="generate()">Generate Test Cases + Postman</button>
-    <div id="generationStatus"></div>
-
-    <h3>Output</h3>
-    <pre id="output"></pre>
+  <div id="postmanTab" style="display:none;">
+    <pre id="postmanOutput"></pre>
+    <button onclick="downloadPostman()">Download Postman Collection</button>
   </div>
+</div>
 
 </div>
 
 <script>
 const API_BASE = 'http://localhost:3000';
+let latestPostman = null;
 
 /* ---------- helpers ---------- */
 function setStatus(id, msg, type) {
@@ -166,9 +236,22 @@ function setStatus(id, msg, type) {
   el.textContent = msg;
 }
 
-/* ---------- config ---------- */
+function showTab(tab) {
+  document.getElementById('testcasesTab').style.display =
+    tab === 'testcases' ? 'block' : 'none';
+  document.getElementById('postmanTab').style.display =
+    tab === 'postman' ? 'block' : 'none';
+
+  document.querySelectorAll('.tab-btn').forEach(btn =>
+    btn.classList.remove('active')
+  );
+  document.querySelectorAll('.tab-btn')[tab === 'testcases' ? 0 : 1]
+    .classList.add('active');
+}
+
+/* ---------- CONFIG ---------- */
 async function validateConfig() {
-  const provider = document.getElementById('aiProvider').value;
+  const provider = aiProvider.value;
   const apiKey = document.getElementById('apiKey').value;
 
   if (!apiKey) {
@@ -191,18 +274,14 @@ async function validateConfig() {
 
   const data = await res.json();
 
-  if (!res.ok) {
-    setStatus('configStatus', data.error, 'error');
-    return;
-  }
-
-  setStatus('configStatus', data.message, 'success');
+  res.ok
+    ? setStatus('configStatus', data.message, 'success')
+    : setStatus('configStatus', data.error, 'error');
 }
 
-/* ---------- swagger ---------- */
+/* ---------- SWAGGER ---------- */
 async function loadSwagger() {
-  const url = document.getElementById('swaggerUrl').value;
-
+  const url = swaggerUrl.value;
   setStatus('swaggerStatus', 'Loading Swagger...', 'info');
 
   const res = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
@@ -218,57 +297,36 @@ async function loadSwagger() {
     return;
   }
 
-  setStatus(
-    'swaggerStatus',
-    `Loaded ${data.endpoints.length} endpoints`,
-    'success'
-  );
-
-  const container = document.getElementById('swaggerEndpoints');
-  container.innerHTML = '';
+  setStatus('swaggerStatus', `Loaded ${data.endpoints.length} endpoints`, 'success');
+  swaggerEndpoints.innerHTML = '';
 
   data.endpoints.forEach(e => {
-    const div = document.createElement('div');
-    div.className = 'endpoint';
-    div.textContent = `${e.methods.join('/')} ${e.path}`;
-    div.onclick = () => {
-      document.getElementById('storyName').value =
-        e.summary || `${e.methods[0]} ${e.path}`;
-
-      document.getElementById('acceptanceCriteria').value =
+    const el = document.createElement('div');
+    el.className = 'endpoint';
+    el.textContent = `${e.methods.join('/')} ${e.path}`;
+    el.onclick = () => {
+      storyName.value = e.summary || `${e.methods[0]} ${e.path}`;
+      acceptanceCriteria.value =
         `Endpoint: ${e.methods[0]} ${e.path}\nValidate success and error cases.`;
-
-      document.getElementById('apiEndpoint').value = e.path;
+      apiEndpoint.value = e.path;
     };
-    container.appendChild(div);
+    swaggerEndpoints.appendChild(el);
   });
 }
 
-/* ---------- generate ---------- */
+/* ---------- GENERATE ---------- */
 async function generate() {
-  const storyName = document.getElementById('storyName').value;
-  const acceptanceCriteria = document.getElementById('acceptanceCriteria').value;
-  const endpoint = document.getElementById('apiEndpoint').value;
-
-  const provider = document.getElementById('aiProvider').value;
-  const apiKey = document.getElementById('apiKey').value;
-
-  if (!storyName || !acceptanceCriteria) {
-    setStatus('generationStatus', 'Missing required fields', 'error');
-    return;
-  }
-
   setStatus('generationStatus', 'Generating...', 'info');
 
   const res = await fetch(`${API_BASE}/api/generate/combined`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      storyName,
-      acceptanceCriteria,
-      endpoint,
-      aiProvider: provider,
-      apiKey
+      storyName: storyName.value,
+      acceptanceCriteria: acceptanceCriteria.value,
+      endpoint: apiEndpoint.value,
+      aiProvider: aiProvider.value,
+      apiKey: apiKey.value
     })
   });
 
@@ -279,9 +337,25 @@ async function generate() {
     return;
   }
 
+  testCasesOutput.textContent = JSON.stringify(data.testCases, null, 2);
+  postmanOutput.textContent = JSON.stringify(data.postman, null, 2);
+  latestPostman = data.postman;
+
   setStatus('generationStatus', 'Generation complete', 'success');
-  document.getElementById('output').textContent =
-    JSON.stringify(data, null, 2);
+}
+
+/* ---------- DOWNLOAD ---------- */
+function downloadPostman() {
+  const blob = new Blob(
+    [JSON.stringify(latestPostman, null, 2)],
+    { type: 'application/json' }
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'postman_collection.json';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
