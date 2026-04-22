@@ -73,6 +73,28 @@ app.post('/api/config/validate', async (req, res) => {
       });
     }
 
+    // Validate AI API key by testing a simple request
+    try {
+      const generator = new TestCaseGenerator(apiKey, aiProvider);
+      await generator.validateApiKey();
+    } catch (validationError) {
+      return res.status(400).json({
+        error: `Invalid ${aiProvider} API key: ${validationError.message}`
+      });
+    }
+
+    // Validate Rally API key if provided
+    if (rallyApiKey && rallyWorkspaceUrl) {
+      try {
+        const rally = new RallyClient(rallyApiKey, rallyWorkspaceUrl);
+        await rally.validateConnection();
+      } catch (validationError) {
+        return res.status(400).json({
+          error: `Invalid Rally credentials: ${validationError.message}`
+        });
+      }
+    }
+
     // Initialize AI generator
     testCaseGenerator = new TestCaseGenerator(apiKey, aiProvider);
 

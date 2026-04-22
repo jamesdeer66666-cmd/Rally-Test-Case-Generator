@@ -25,6 +25,84 @@ class TestCaseGenerator {
   // PUBLIC API
   // =============================================================
 
+  async validateApiKey() {
+    try {
+      switch (this.provider) {
+        case "gemini":
+          // Test Gemini API with a minimal request
+          return await this.validateGeminiKey();
+        case "groq":
+          // Test Groq API with a models list call
+          return await this.validateGroqKey();
+        case "openai":
+        default:
+          // Test OpenAI with models list
+          return await this.validateOpenAIKey();
+      }
+    } catch (err) {
+      throw new Error(`API key validation failed: ${err.message}`);
+    }
+  }
+
+  async validateOpenAIKey() {
+    try {
+      const response = await this.client.models.list();
+      if (!response.data || response.data.length === 0) {
+        throw new Error("Unable to retrieve models list from OpenAI");
+      }
+      return true;
+    } catch (err) {
+      throw new Error(`OpenAI validation failed: ${err.message}`);
+    }
+  }
+
+  async validateGroqKey() {
+    try {
+      const response = await axios.get(
+        `${this.groqBaseUrl}/models`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      if (!response.data || !response.data.data || response.data.data.length === 0) {
+        throw new Error("Unable to retrieve models list from Groq");
+      }
+      return true;
+    } catch (err) {
+      if (err.response?.status === 401) {
+        throw new Error("Invalid Groq API key (401 Unauthorized)");
+      }
+      throw new Error(`Groq validation failed: ${err.message}`);
+    }
+  }
+
+  async validateGeminiKey() {
+    try {
+      // Make a minimal request to Gemini API to validate the key
+      const response = await axios.post(
+        "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
+        { 
+          contents: [{ role: "user", parts: [{ text: "test" }] }] 
+        },
+        {
+          params: { key: this.geminiApiKey }
+        }
+      );
+      if (!response.data) {
+        throw new Error("No response from Gemini API");
+      }
+      return true;
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        throw new Error("Invalid Gemini API key (Authentication failed)");
+      }
+      throw new Error(`Gemini validation failed: ${err.message}`);
+    }
+  }
+
   async generateTestCases(acceptanceCriteria, storyName) {
     try {
       const prompt = this.buildTestCasePrompt(acceptanceCriteria, storyName);

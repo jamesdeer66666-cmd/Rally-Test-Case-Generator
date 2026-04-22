@@ -14,6 +14,22 @@ class RallyClient {
     });
   }
 
+  async validateConnection() {
+    try {
+      // Test connection with a minimal query
+      const response = await this.client.get('/slm/v2/userstory', {
+        params: {
+          pagesize: 1,
+          fetch: 'FormattedID'
+        }
+      });
+      // If we get here without error, connection is valid
+      return true;
+    } catch (error) {
+      throw new Error(`Connection test failed: ${error.message}`);
+    }
+  }
+
   async getUserStories() {
     try {
       const response = await this.client.get('/slm/v2/userstory', {

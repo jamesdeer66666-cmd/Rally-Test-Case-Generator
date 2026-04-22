@@ -1,6 +1,6 @@
 {
   "productName": "rally-ai-testcase-generator",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "identifier": "com.rally.testcase-generator",
 
   "build": {
