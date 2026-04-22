@@ -9,17 +9,14 @@
     :root {
       --primary: #667eea;
       --secondary: #764ba2;
-      --bg: #f4f6fb;
       --card: #ffffff;
-      --muted: #6c757d;
     }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: system-ui, sans-serif;
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       margin: 0;
       padding: 30px;
-      color: #333;
     }
 
     .container {
@@ -33,15 +30,6 @@
       margin-bottom: 40px;
     }
 
-    header h1 {
-      font-size: 2.4rem;
-      margin-bottom: 8px;
-    }
-
-    header p {
-      opacity: 0.9;
-    }
-
     .card {
       background: var(--card);
       border-radius: 12px;
@@ -51,17 +39,15 @@
     }
 
     .card h2 {
-      margin-top: 0;
-      margin-bottom: 16px;
       border-bottom: 3px solid var(--primary);
       padding-bottom: 6px;
+      margin-bottom: 16px;
     }
 
     label {
       font-weight: 600;
+      margin-top: 12px;
       display: block;
-      margin-top: 14px;
-      margin-bottom: 6px;
     }
 
     input, textarea, select {
@@ -69,10 +55,11 @@
       padding: 10px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 0.95rem;
     }
 
-    textarea { min-height: 110px; }
+    textarea {
+      min-height: 110px;
+    }
 
     button {
       margin-top: 16px;
@@ -82,17 +69,12 @@
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 1rem;
       cursor: pointer;
     }
 
     button.secondary {
       background: #e9ecf5;
       color: #333;
-    }
-
-    button:disabled {
-      opacity: 0.6;
     }
 
     .status {
@@ -102,9 +84,9 @@
       font-size: 0.9rem;
     }
 
-    .status.success { background: #d4edda; color: #155724; }
-    .status.error   { background: #f8d7da; color: #721c24; }
-    .status.info    { background: #d1ecf1; color: #0c5460; }
+    .status.success { background: #d4edda; }
+    .status.error { background: #f8d7da; }
+    .status.info { background: #d1ecf1; }
 
     .endpoint {
       padding: 10px;
@@ -112,7 +94,6 @@
       border-radius: 6px;
       margin-top: 8px;
       cursor: pointer;
-      font-size: 0.9rem;
     }
 
     .endpoint:hover {
@@ -129,11 +110,11 @@
     .tab-btn {
       flex: 1;
       background: #e9ecf5;
-      border-radius: 6px;
       padding: 10px;
+      text-align: center;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: 600;
-      text-align: center;
     }
 
     .tab-btn.active {
@@ -148,7 +129,6 @@
       max-height: 420px;
       overflow: auto;
       white-space: pre-wrap;
-      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -158,10 +138,10 @@
 
 <header>
   <h1>🚀 Rally AI Test Case Generator</h1>
-  <p>From Swagger → Test Cases → Postman, in seconds</p>
+  <p>From Rally → Swagger → Test Cases → Postman</p>
 </header>
 
-<!-- ================= AI CONFIG ================= -->
+<!-- AI CONFIG -->
 <div class="card">
   <h2>⚙️ AI Configuration</h2>
 
@@ -172,27 +152,42 @@
     <option value="gemini">Gemini</option>
   </select>
 
-  <label>API Key</label>
+  <label>AI API Key</label>
   <input type="password" id="apiKey">
 
+  <label>Rally API Key (optional)</label>
+  <input type="password" id="rallyApiKey">
+
+  <label>Rally Workspace URL (optional)</label>
+  <input
+    id="rallyWorkspaceUrl"
+    placeholder="https://rally1.rallydev.com"
+  >
+
   <button onclick="validateConfig()">Validate Configuration</button>
+  <button class="secondary" onclick="clearSavedConfig()">Clear Saved Config</button>
+
   <div id="configStatus"></div>
 </div>
 
-<!-- ================= SWAGGER ================= -->
+<!-- RALLY -->
+<div class="card">
+  <h2>📋 Rally Stories</h2>
+  <button class="secondary" onclick="loadRallyStories()">Load Rally Stories</button>
+  <div id="rallyStatus"></div>
+  <div id="rallyStories"></div>
+</div>
+
+<!-- SWAGGER -->
 <div class="card">
   <h2>📡 Swagger / OpenAPI</h2>
-
-  <label>Swagger URL</label>
   <input id="swaggerUrl" value="https://petstore.swagger.io/">
-
   <button class="secondary" onclick="loadSwagger()">Load Endpoints</button>
-
   <div id="swaggerStatus"></div>
   <div id="swaggerEndpoints"></div>
 </div>
 
-<!-- ================= GENERATE ================= -->
+<!-- GENERATE -->
 <div class="card">
   <h2>🧪 Generate</h2>
 
@@ -202,22 +197,23 @@
   <label>Acceptance Criteria</label>
   <textarea id="acceptanceCriteria"></textarea>
 
-  <label>API Endpoint (optional)</label>
+  <label>API Endpoint</label>
   <input id="apiEndpoint">
 
   <button onclick="generate()">Generate Test Cases + Postman</button>
+
   <div id="generationStatus"></div>
 
   <div class="tabs">
-    <div class="tab-btn active" onclick="showTab('testcases')">Test Cases</div>
-    <div class="tab-btn" onclick="showTab('postman')">Postman</div>
+    <div class="tab-btn active" onclick="showTab('tc')">Test Cases</div>
+    <div class="tab-btn" onclick="showTab('pm')">Postman</div>
   </div>
 
-  <div id="testcasesTab">
+  <div id="tcTab">
     <pre id="testCasesOutput"></pre>
   </div>
 
-  <div id="postmanTab" style="display:none;">
+  <div id="pmTab" style="display:none;">
     <pre id="postmanOutput"></pre>
     <button onclick="downloadPostman()">Download Postman Collection</button>
   </div>
@@ -228,8 +224,37 @@
 <script>
 const API_BASE = 'http://localhost:3000';
 let latestPostman = null;
+const CONFIG_KEY = 'rallyAiConfig';
 
-/* ---------- helpers ---------- */
+/* ---------- Persistence ---------- */
+function loadConfigFromStorage() {
+  const saved = localStorage.getItem(CONFIG_KEY);
+  if (!saved) return;
+
+  try {
+    const cfg = JSON.parse(saved);
+    aiProvider.value = cfg.aiProvider || 'groq';
+    apiKey.value = cfg.apiKey || '';
+    rallyApiKey.value = cfg.rallyApiKey || '';
+    rallyWorkspaceUrl.value = cfg.rallyWorkspaceUrl || '';
+
+    setStatus('configStatus', '✅ Loaded saved configuration', 'success');
+  } catch {}
+}
+
+function saveConfigToStorage(cfg) {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function clearSavedConfig() {
+  localStorage.removeItem(CONFIG_KEY);
+  apiKey.value = '';
+  rallyApiKey.value = '';
+  rallyWorkspaceUrl.value = '';
+  setStatus('configStatus', 'Saved configuration cleared', 'info');
+}
+
+/* ---------- UI Helpers ---------- */
 function setStatus(id, msg, type) {
   const el = document.getElementById(id);
   el.className = 'status ' + type;
@@ -237,32 +262,33 @@ function setStatus(id, msg, type) {
 }
 
 function showTab(tab) {
-  document.getElementById('testcasesTab').style.display =
-    tab === 'testcases' ? 'block' : 'none';
-  document.getElementById('postmanTab').style.display =
-    tab === 'postman' ? 'block' : 'none';
-
-  document.querySelectorAll('.tab-btn').forEach(btn =>
-    btn.classList.remove('active')
-  );
-  document.querySelectorAll('.tab-btn')[tab === 'testcases' ? 0 : 1]
-    .classList.add('active');
+  tcTab.style.display = tab === 'tc' ? 'block' : 'none';
+  pmTab.style.display = tab === 'pm' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn')[tab === 'tc' ? 0 : 1].classList.add('active');
 }
 
 /* ---------- CONFIG ---------- */
 async function validateConfig() {
   const provider = aiProvider.value;
-  const apiKey = document.getElementById('apiKey').value;
+  const key = apiKey.value;
+  const rallyKey = rallyApiKey.value;
+  const rallyUrl = rallyWorkspaceUrl.value;
 
-  if (!apiKey) {
-    setStatus('configStatus', 'API key required', 'error');
+  if (!key) {
+    setStatus('configStatus', 'AI API key is required', 'error');
     return;
   }
 
   const body = { aiProvider: provider };
-  if (provider === 'groq') body.groqApiKey = apiKey;
-  else if (provider === 'gemini') body.geminiApiKey = apiKey;
-  else body.openaiApiKey = apiKey;
+  if (provider === 'groq') body.groqApiKey = key;
+  else if (provider === 'gemini') body.geminiApiKey = key;
+  else body.openaiApiKey = key;
+
+  if (rallyKey && rallyUrl) {
+    body.rallyApiKey = rallyKey;
+    body.rallyWorkspaceUrl = rallyUrl;
+  }
 
   setStatus('configStatus', 'Validating...', 'info');
 
@@ -274,44 +300,79 @@ async function validateConfig() {
 
   const data = await res.json();
 
-  res.ok
-    ? setStatus('configStatus', data.message, 'success')
-    : setStatus('configStatus', data.error, 'error');
+  if (!res.ok) {
+    setStatus('configStatus', data.error, 'error');
+    return;
+  }
+
+  saveConfigToStorage({
+    aiProvider: provider,
+    apiKey: key,
+    rallyApiKey: rallyKey,
+    rallyWorkspaceUrl: rallyUrl
+  });
+
+  setStatus('configStatus', 'Configuration validated and saved ✅', 'success');
+}
+
+/* ---------- RALLY ---------- */
+async function loadRallyStories() {
+  setStatus('rallyStatus', 'Loading Rally stories...', 'info');
+  const res = await fetch(`${API_BASE}/api/rally/stories`);
+  const data = await res.json();
+
+  if (!res.ok) {
+    setStatus('rallyStatus', data.error, 'error');
+    return;
+  }
+
+  rallyStories.innerHTML = '';
+  data.stories.forEach(story => {
+    const el = document.createElement('div');
+    el.className = 'endpoint';
+    el.textContent = `${story.id} — ${story.name}`;
+    el.onclick = () => {
+      loadRallyStory(story.id);
+    };
+    rallyStories.appendChild(el);
+  });
+
+  setStatus('rallyStatus', 'Stories loaded', 'success');
+}
+
+async function loadRallyStory(id) {
+  const res = await fetch(`${API_BASE}/api/rally/story/${id}`);
+  const data = await res.json();
+  storyName.value = data.name;
+  acceptanceCriteria.value = data.acceptanceCriteria;
 }
 
 /* ---------- SWAGGER ---------- */
 async function loadSwagger() {
-  const url = swaggerUrl.value;
   setStatus('swaggerStatus', 'Loading Swagger...', 'info');
 
   const res = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ swaggerUrl: url })
+    body: JSON.stringify({ swaggerUrl: swaggerUrl.value })
   });
 
   const data = await res.json();
 
-  if (!res.ok) {
-    setStatus('swaggerStatus', data.error, 'error');
-    return;
-  }
-
-  setStatus('swaggerStatus', `Loaded ${data.endpoints.length} endpoints`, 'success');
   swaggerEndpoints.innerHTML = '';
-
   data.endpoints.forEach(e => {
     const el = document.createElement('div');
     el.className = 'endpoint';
     el.textContent = `${e.methods.join('/')} ${e.path}`;
     el.onclick = () => {
-      storyName.value = e.summary || `${e.methods[0]} ${e.path}`;
-      acceptanceCriteria.value =
-        `Endpoint: ${e.methods[0]} ${e.path}\nValidate success and error cases.`;
+      storyName.value = e.summary || e.path;
+      acceptanceCriteria.value = `Endpoint: ${e.path}`;
       apiEndpoint.value = e.path;
     };
     swaggerEndpoints.appendChild(el);
   });
+
+  setStatus('swaggerStatus', 'Endpoints loaded', 'success');
 }
 
 /* ---------- GENERATE ---------- */
@@ -350,13 +411,16 @@ function downloadPostman() {
     [JSON.stringify(latestPostman, null, 2)],
     { type: 'application/json' }
   );
-  const url = URL.createObjectURL(blob);
+
   const a = document.createElement('a');
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = 'postman_collection.json';
   a.click();
-  URL.revokeObjectURL(url);
 }
+
+/* ---------- INIT ---------- */
+loadConfigFromStorage();
 </script>
+
 </body>
 </html>
