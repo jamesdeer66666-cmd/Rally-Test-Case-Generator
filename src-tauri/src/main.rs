@@ -21,26 +21,35 @@ async fn start_backend(app: AppHandle) -> Result<String, String> {
     return Ok("Backend already running".into());
   }
 
-  let server_js = if cfg!(debug_assertions) {
-    // ✅ DEV MODE — run from source directory
+  let (command, args) = if cfg!(debug_assertions) {
+    // ✅ DEV MODE — run from source directory with node
     let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.pop(); // remove `src-tauri`
     path.push("src-tauri");
     path.push("resources");
     path.push("node");
     path.push("server.js");
-    path
+    ("node".to_string(), vec![path.to_string_lossy().to_string()])
   } else {
-    // ✅ PRODUCTION MODE — run from bundled resources
-    app.path()
+    // ✅ PRODUCTION MODE — run bundled executable
+    let resource_dir = app.path()
       .resource_dir()
-      .map_err(|e| format!("Failed to resolve resource dir: {}", e))?
-      .join("node")
-      .join("server.js")
+      .map_err(|e| format!("Failed to resolve resource dir: {}", e))?;
+    let exe_name = if cfg!(target_os = "windows") {
+      "server-win.exe"
+    } else if cfg!(target_os = "linux") {
+      "server-linux"
+    } else if cfg!(target_os = "macos") {
+      "server-macos"
+    } else {
+      return Err("Unsupported platform".into());
+    };
+    let exe_path = resource_dir.join("dist").join(exe_name);
+    (exe_path.to_string_lossy().to_string(), vec![])
   };
 
-  let child = Command::new("node")
-    .arg(&server_js)
+  let child = Command::new(command)
+    .args(&args)
     .spawn()
     .map_err(|e| format!("Failed to start Node backend: {}", e))?;
 

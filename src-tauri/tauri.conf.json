@@ -4,6 +4,7 @@
   "identifier": "com.rally.testcase-generator",
 
   "build": {
+    "beforeBuildCommand": "cd src-tauri/resources/node && npm install && npm run build",
     "frontendDist": "../public"
   },
 
