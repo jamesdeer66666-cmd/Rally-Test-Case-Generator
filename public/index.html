@@ -181,11 +181,57 @@
 <!-- SWAGGER -->
 <div class="card">
   <h2>📡 Swagger / OpenAPI</h2>
-  <input id="swaggerUrl" value="https://petstore.swagger.io/">
-  <button class="secondary" onclick="loadSwagger()">Load Endpoints</button>
+
+  <input
+    id="swaggerUrl"
+    value="https://petstore.swagger.io/"
+    placeholder="https://api.example.com/swagger.json"
+  />
+
+  <details style="margin-top: 8px;">
+    <summary>🔐 Authentication (optional)</summary>
+
+    <select id="swaggerAuthType" style="margin-top: 6px;">
+      <option value="">None</option>
+      <option value="basic">Basic Auth</option>
+      <option value="bearer">Bearer Token</option>
+    </select>
+
+    <!-- Basic Auth -->
+    <div id="basicAuthFields" style="display:none;">
+      <input
+        id="swaggerUsername"
+        type="text"
+        placeholder="Username"
+        style="margin-top: 6px;"
+      />
+      <input
+        id="swaggerPassword"
+        type="password"
+        placeholder="Password"
+        style="margin-top: 6px;"
+      />
+    </div>
+
+    <!-- Bearer Auth -->
+    <div id="bearerAuthFields" style="display:none;">
+      <input
+        id="swaggerBearerToken"
+        type="password"
+        placeholder="Bearer token (no 'Bearer ' prefix)"
+        style="margin-top: 6px;"
+      />
+    </div>
+  </details>
+
+  <button class="secondary" onclick="loadSwagger()">
+    Load Endpoints
+  </button>
+
   <div id="swaggerStatus"></div>
   <div id="swaggerEndpoints"></div>
 </div>
+
 
 <!-- GENERATE -->
 <div class="card">
@@ -351,28 +397,71 @@ async function loadRallyStory(id) {
 async function loadSwagger() {
   setStatus('swaggerStatus', 'Loading Swagger...', 'info');
 
-  const res = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ swaggerUrl: swaggerUrl.value })
-  });
+  const payload = {
+    swaggerUrl: swaggerUrl.value.trim()
+  };
 
-  const data = await res.json();
+  const authType = swaggerAuthType.value;
 
-  swaggerEndpoints.innerHTML = '';
-  data.endpoints.forEach(e => {
-    const el = document.createElement('div');
-    el.className = 'endpoint';
-    el.textContent = `${e.methods.join('/')} ${e.path}`;
-    el.onclick = () => {
-      storyName.value = e.summary || e.path;
-      acceptanceCriteria.value = `Endpoint: ${e.path}`;
-      apiEndpoint.value = e.path;
-    };
-    swaggerEndpoints.appendChild(el);
-  });
+  if (authType === 'basic') {
+    if (swaggerUsername.value || swaggerPassword.value) {
+      payload.auth = {
+        type: 'basic',
+        username: swaggerUsername.value,
+        password: swaggerPassword.value
+      };
+    }
+  }
 
-  setStatus('swaggerStatus', 'Endpoints loaded', 'success');
+  if (authType === 'bearer') {
+    if (swaggerBearerToken.value) {
+      payload.auth = {
+        type: 'bearer',
+        token: swaggerBearerToken.value.trim()
+      };
+    }
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/generate/swagger-endpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      setStatus('swaggerStatus', 'Failed to load Swagger', 'error');
+      return;
+    }
+
+    const data = await res.json();
+
+    swaggerEndpoints.innerHTML = '';
+
+    if (!Array.isArray(data.endpoints) || data.endpoints.length === 0) {
+      setStatus('swaggerStatus', 'No endpoints found', 'warning');
+      return;
+    }
+
+    data.endpoints.forEach(e => {
+      const el = document.createElement('div');
+      el.className = 'endpoint';
+      el.textContent = `${e.methods.join('/')} ${e.path}`;
+
+      el.onclick = () => {
+        storyName.value = e.summary || e.path;
+        acceptanceCriteria.value = `Endpoint: ${e.path}`;
+        apiEndpoint.value = e.path;
+      };
+
+      swaggerEndpoints.appendChild(el);
+    });
+
+    setStatus('swaggerStatus', 'Endpoints loaded', 'success');
+  } catch (err) {
+    console.error(err);
+    setStatus('swaggerStatus', 'Error loading Swagger', 'error');
+  }
 }
 
 /* ---------- GENERATE ---------- */
@@ -417,6 +506,33 @@ function downloadPostman() {
   a.download = 'postman_collection.json';
   a.click();
 }
+
+
+/* ---------- SWAGGER AUTH TOGGLE ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const authType = document.getElementById('swaggerAuthType');
+  const basicFields = document.getElementById('basicAuthFields');
+  const bearerFields = document.getElementById('bearerAuthFields');
+
+  if (!authType || !basicFields || !bearerFields) {
+    console.error('Swagger auth elements not found');
+    return;
+  }
+
+  function updateSwaggerAuthFields() {
+    basicFields.style.display =
+      authType.value === 'basic' ? 'block' : 'none';
+
+    bearerFields.style.display =
+      authType.value === 'bearer' ? 'block' : 'none';
+  }
+
+  authType.addEventListener('change', updateSwaggerAuthFields);
+
+  // Ensure correct state on page load
+  updateSwaggerAuthFields();
+});
+
 
 /* ---------- INIT ---------- */
 loadConfigFromStorage();
