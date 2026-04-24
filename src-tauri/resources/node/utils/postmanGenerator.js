@@ -1,145 +1,155 @@
 class PostmanGenerator {
-
   // =============================================================
   // COLLECTION
   // =============================================================
 
-  static generateCollection(input = [], collectionName = "Rally API Tests") {
-    const testCases =
-  this.extractTestCases(input).length
-    ? this.extractTestCases(input)
-    : this.intentToTestCases(input);
+  static generateCollection(input = {}, collectionName = "Sample Service API Tests") {
+    const resolvedCollectionName =
+      input?.collectionName || collectionName || "Sample Service API Tests";
 
-    console.log("DEBUG input:", input);
-
-    if (!testCases.length) {
-      console.warn("PostmanGenerator: No valid test cases found");
-    }
-
-    const grouped = this.groupByType(testCases);
+    const testCases = this.resolveTestCases(input);
+    const grouped = this.groupByCategory(testCases);
 
     return {
       info: {
-        name: collectionName,
-        description:
-          "Enterprise-ready Postman collection generated from test cases",
-        schema:
-          "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        name: resolvedCollectionName,
+        description: "Postman collection generated from generic API test definitions",
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
       },
       item: this.buildFolders(grouped),
       variable: [
         { key: "baseUrl", value: "https://api.example.com" },
+        { key: "tenantId", value: "demo-tenant" },
         { key: "authToken", value: "" },
-        { key: "uuid", value: "" }
+        { key: "correlationId", value: "" }
       ]
     };
   }
-// =============================================================
-// Intent to Test Cases
-// =============================================================
 
-static intentToTestCases(input) {
-  if (!input?.intents || !Array.isArray(input.intents)) return [];
-
-  return input.intents.map((intent, index) => {
-    const isUpload = intent.endpoint?.includes("uploadImage");
-
-    return {
-      id: `INTENT_${index + 1}`,
-      title: intent.name || "Untitled Intent",
-      type: "positive",
-      method: isUpload ? "POST" : intent.method || "GET",
-      endpoint: intent.endpoint,
-      bodyType: isUpload ? "form-data" : undefined,
-      formData: isUpload
-        ? [
-            { key: "file", type: "file", src: "pet.jpg" },
-            { key: "additionalMetadata", value: "test upload" }
-          ]
-        : undefined,
-      expectedStatusCode: 200
-    };
-  });
-}
   // =============================================================
-  // EXTRACT VALID TEST CASES (CRITICAL)
+  // INPUT RESOLUTION
   // =============================================================
 
-  static extractTestCases(input) {
-  // ✅ if we hit an array, validate its contents
-  if (Array.isArray(input)) {
-    const valid = input.filter(tc => this.isValidTestCase(tc));
-    return valid.length ? valid : [];
-  }
+  static resolveTestCases(input) {
+    // 1. Preferred: explicit testCases array
+    if (Array.isArray(input?.testCases)) {
+      return input.testCases
+        .map((tc, index) => this.normalizeTestCase(tc, index))
+        .filter(tc => this.isValidTestCase(tc));
+    }
 
-  // ❌ nothing to scan
-  if (!input || typeof input !== "object") {
+    // 2. Next: operations array
+    if (Array.isArray(input?.operations)) {
+      return this.operationsToTestCases(input.operations);
+    }
+
+    // 3. Fallback: recursive extraction for demo/flexible input
+    const extracted = this.extractTestCases(input);
+    if (extracted.length) {
+      return extracted.map((tc, index) => this.normalizeTestCase(tc, index));
+    }
+
     return [];
   }
 
-  // ✅ recursively walk objects
-  for (const value of Object.values(input)) {
-    const found = this.extractTestCases(value);
-    if (found.length) return found;
+  static normalizeTestCase(tc, index = 0) {
+    if (!tc || typeof tc !== "object") return {};
+
+    return {
+      id: tc.id || `TC_${index + 1}`,
+      name: tc.name || tc.title || `Test Case ${index + 1}`,
+      category: tc.category || tc.type || "positive",
+      method: (tc.method || "GET").toUpperCase(),
+      path: tc.path || tc.endpoint || "/",
+      description: tc.description || "",
+      headers: tc.headers || {},
+      query: tc.query || {},
+      auth: tc.auth || { type: "bearer", tokenVar: "authToken" },
+      expectedStatus: tc.expectedStatus ?? tc.expectedStatusCode ?? 200,
+      requestBody: tc.requestBody ?? tc.body,
+      bodyType: tc.bodyType || (tc.formData ? "form-data" : "json"),
+      formData: tc.formData || []
+    };
   }
 
-  return [];
-}
+  static extractTestCases(input) {
+    if (Array.isArray(input)) {
+      return input.filter(item => item && typeof item === "object");
+    }
 
-static isValidTestCase(tc) {
-  return (
-    tc &&
-    typeof tc === "object" &&
-    typeof tc.id === "string" &&
-    typeof tc.method === "string" &&
-    typeof tc.endpoint === "string"
-  );
-}
+    if (!input || typeof input !== "object") {
+      return [];
+    }
 
-// =============================================================
-// Expand Intents into Test Cases (for backward compatibility) 
-// =============================================================
-static expandIntentIntoTestCases(intent, index) {
-  const base = {
-    endpoint: intent.endpoint,
-    method: intent.method
-  };
+    for (const value of Object.values(input)) {
+      const found = this.extractTestCases(value);
+      if (found.length) return found;
+    }
 
-  const positives = [{
-    ...base,
-    id: `INTENT_${index}_POS`,
-    title: `${intent.name} – valid`,
-    type: "positive",
-    expectedStatusCode: 200
-  }];
+    return [];
+  }
 
-  const negatives = (intent.validations || []).map((v, i) => ({
-    ...base,
-    id: `INTENT_${index}_NEG_${i + 1}`,
-    title: `${intent.name} – ${v}`,
-    type: "negative",
-    expectedStatusCode: 400
-  }));
+  static isValidTestCase(tc) {
+    return (
+      tc &&
+      typeof tc === "object" &&
+      typeof tc.id === "string" &&
+      typeof tc.name === "string" &&
+      typeof tc.method === "string" &&
+      typeof tc.path === "string"
+    );
+  }
 
-  return [...positives, ...negatives];
-}
+  // =============================================================
+  // OPERATIONS -> TEST CASES
+  // =============================================================
+
+  static operationsToTestCases(operations = []) {
+    return operations
+      .map((operation, index) => {
+        const method = (operation.method || "GET").toUpperCase();
+        const contentType = operation.request?.contentType;
+        const isMultipart = contentType === "multipart/form-data";
+
+        return {
+          id: operation.id || `OP_${index + 1}`,
+          name: operation.name || `Operation ${index + 1}`,
+          category: operation.category || "positive",
+          method,
+          path: operation.path || "/",
+          description: operation.description || "",
+          headers: operation.headers || {},
+          query: operation.query || {},
+          auth: operation.auth || { type: "bearer", tokenVar: "authToken" },
+          expectedStatus: operation.expectedStatus ?? 200,
+          requestBody: isMultipart ? undefined : operation.request?.body,
+          bodyType: isMultipart ? "form-data" : "json",
+          formData: isMultipart ? (operation.request?.formData || []) : []
+        };
+      })
+      .filter(tc => this.isValidTestCase(tc));
+  }
+
   // =============================================================
   // GROUPING
   // =============================================================
 
-  static groupByType(cases) {
-    if (!Array.isArray(cases)) {
-      throw new TypeError(
-        `PostmanGenerator expected testCases array, got ${typeof cases}`
-      );
-    }
-
-    return cases.reduce((acc, tc) => {
-      const type = (tc.type || "positive").toLowerCase();
-      acc[type] = acc[type] || [];
-      acc[type].push(tc);
+  static groupByCategory(testCases) {
+    return testCases.reduce((acc, tc) => {
+      const key = (tc.category || "positive").toLowerCase();
+      acc[key] = acc[key] || [];
+      acc[key].push(tc);
       return acc;
     }, {});
+  }
+
+  static categoryLabel(category) {
+    return {
+      positive: "Positive Scenarios",
+      negative: "Negative Scenarios",
+      edge: "Edge Scenarios",
+      regression: "Regression Scenarios"
+    }[category] || category;
   }
 
   // =============================================================
@@ -148,83 +158,89 @@ static expandIntentIntoTestCases(intent, index) {
 
   static buildFolders(grouped) {
     return Object.entries(grouped)
-      .filter(([, cases]) => cases.length)
-      .map(([type, cases]) => ({
-        name: this.typeLabel(type),
-        item: cases.map(tc => this.createRequest(tc))
+      .filter(([, cases]) => Array.isArray(cases) && cases.length > 0)
+      .map(([category, cases]) => ({
+        name: this.categoryLabel(category),
+        item: cases.map(tc => this.createRequestItem(tc))
       }));
   }
 
-  static typeLabel(type) {
-    return {
-      positive: "✅ Positive Tests",
-      negative: "❌ Negative Tests",
-      edge: "⚠️ Edge Tests"
-    }[type] || type;
-  }
-
   // =============================================================
-  // REQUEST
+  // REQUEST ITEM
   // =============================================================
 
-  static createRequest(tc) {
-    const id = tc.id;
-    const title = tc.title || "Untitled Test";
-    const endpoint = tc.endpoint;
-    const method = tc.method || "GET";
+  static createRequestItem(tc) {
+    const body = this.buildBody(tc);
 
     return {
-      name: `${id} – ${title}`,
+      name: `${tc.id} - ${tc.name}`,
       request: {
-        method,
+        method: tc.method || "GET",
+        description: tc.description || "",
         header: this.buildHeaders(tc),
-        body: this.buildBody(tc),
-        url: this.buildUrl({ ...tc, endpoint })
+        url: this.buildUrl(tc),
+        ...(body ? { body } : {})
       },
       event: [
-        this.preRequestEvent(),
-        this.testEvent(tc)
+        this.buildPreRequestEvent(),
+        this.buildTestEvent(tc)
       ]
     };
   }
 
   // =============================================================
-  // URL + QUERY
+  // URL
   // =============================================================
 
   static buildUrl(tc) {
-    const endpoint = this.normalizeEndpoint(tc.endpoint);
-    const path = endpoint.split("/").filter(Boolean);
-
-    const query = tc.query
-      ? Object.entries(tc.query).map(([k, v]) => ({
-          key: k,
-          value: String(v)
-        }))
-      : [];
+    const normalizedPath = this.normalizePath(tc.path);
+    const query = this.buildQueryParams(tc.query);
 
     return {
-      raw: `{{baseUrl}}${endpoint}`,
+      raw: this.buildRawUrl(normalizedPath, query),
       host: ["{{baseUrl}}"],
-      path,
+      path: normalizedPath.split("/").filter(Boolean),
       query
     };
   }
 
-  static normalizeEndpoint(endpoint = "") {
-    // OpenAPI {id} → Postman {{id}}
-    return endpoint.replace(/\{(\w+)\}/g, "{{$1}}");
+  static buildRawUrl(path, query = []) {
+    const base = `{{baseUrl}}${path}`;
+    if (!query.length) return base;
+
+    const queryString = query
+      .map(param => `${encodeURIComponent(param.key)}=${encodeURIComponent(param.value)}`)
+      .join("&");
+
+    return `${base}?${queryString}`;
+  }
+
+  static normalizePath(path = "") {
+    const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
+    return withLeadingSlash.replace(/\{(\w+)\}/g, "{{$1}}");
+  }
+
+  static buildQueryParams(query = {}) {
+    return Object.entries(query).map(([key, value]) => ({
+      key,
+      value: String(value)
+    }));
   }
 
   // =============================================================
-  // HEADERS + AUTH (DEDUPLICATED)
+  // HEADERS
   // =============================================================
 
   static buildHeaders(tc) {
-    const headers = new Map([
-      ["Accept", "application/json"],
-      ["Content-Type", "application/json"]
-    ]);
+    const headers = new Map();
+
+    headers.set("Accept", "application/json");
+    headers.set("x-tenant-id", "{{tenantId}}");
+    headers.set("x-correlation-id", "{{correlationId}}");
+
+    if (tc.bodyType === "json" && tc.requestBody !== undefined) {
+      headers.set("Content-Type", "application/json");
+    }
 
     if (tc.auth?.type === "bearer") {
       headers.set(
@@ -233,80 +249,90 @@ static expandIntentIntoTestCases(intent, index) {
       );
     }
 
-    if (tc.headers) {
-      Object.entries(tc.headers).forEach(([k, v]) => {
-        headers.set(k, v);
+    if (tc.headers && typeof tc.headers === "object") {
+      Object.entries(tc.headers).forEach(([key, value]) => {
+        headers.set(key, String(value));
       });
     }
 
-    return Array.from(headers, ([key, value]) => ({ key, value }));
+    return Array.from(headers.entries()).map(([key, value]) => ({
+      key,
+      value
+    }));
   }
 
   // =============================================================
-  // BODY (JSON + MULTIPART)
+  // BODY
   // =============================================================
 
   static buildBody(tc) {
     if (tc.bodyType === "form-data") {
       return {
         mode: "formdata",
-        formdata: tc.formData || []
+        formdata: (tc.formData || []).map(field => ({
+          key: field.key,
+          value: field.value,
+          type: field.type || "text",
+          ...(field.src ? { src: field.src } : {})
+        }))
       };
     }
 
-    if (tc.body) {
+    if (tc.requestBody !== undefined) {
       return {
         mode: "raw",
-        raw: JSON.stringify(tc.body, null, 2),
-        options: { raw: { language: "json" } }
+        raw: JSON.stringify(tc.requestBody, null, 2),
+        options: {
+          raw: {
+            language: "json"
+          }
+        }
       };
     }
+
+    return undefined;
   }
 
   // =============================================================
-  // PRE-REQUEST SCRIPT
+  // EVENTS
   // =============================================================
 
-  static preRequestEvent() {
+  static buildPreRequestEvent() {
     return {
       listen: "prerequest",
       script: {
         type: "text/javascript",
         exec: [
-          `pm.environment.set("uuid", pm.variables.replaceIn("{{$guid}}"));`
+          "pm.environment.set('correlationId', pm.variables.replaceIn('{{$guid}}'));"
         ]
       }
     };
   }
 
-  // =============================================================
-  // TEST SCRIPT
-  // =============================================================
-
-  static testEvent(tc) {
+  static buildTestEvent(tc) {
     return {
       listen: "test",
       script: {
         type: "text/javascript",
-        exec: this.generateTests(tc)
+        exec: this.buildTests(tc)
       }
     };
   }
 
-  static generateTests(tc) {
-    const expectedStatus = tc.expectedStatusCode ?? 200;
-    const method = tc.method ?? "GET";
-
+  static buildTests(tc) {
+    const expectedStatus = tc.expectedStatus ?? 200;
     const tests = [
-      `pm.test("Status ${expectedStatus}", () => {`,
+      `pm.test("Status code is ${expectedStatus}", function () {`,
       `  pm.response.to.have.status(${expectedStatus});`,
       `});`,
-      `pm.test("Valid JSON", () => pm.response.to.be.json);`
+      `pm.test("Response is present", function () {`,
+      `  pm.expect(pm.response).to.exist;`,
+      `});`
     ];
 
-    if (method !== "GET") {
+    if ((tc.method || "GET").toUpperCase() !== "GET") {
       tests.push(
-        `pm.test("Response has body", () => {`,
+        `pm.test("Response body is not empty", function () {`,
         `  pm.expect(pm.response.text()).to.not.be.empty;`,
         `});`
       );
@@ -319,12 +345,14 @@ static expandIntentIntoTestCases(intent, index) {
   // ENVIRONMENT
   // =============================================================
 
-  static generateEnvironment(name = "Rally API Env") {
+  static generateEnvironment(name = "Sample Service Local") {
     return {
       name,
       values: [
         { key: "baseUrl", value: "https://api.example.com", enabled: true },
-        { key: "authToken", value: "", enabled: true }
+        { key: "tenantId", value: "demo-tenant", enabled: true },
+        { key: "authToken", value: "", enabled: true },
+        { key: "correlationId", value: "", enabled: true }
       ]
     };
   }
